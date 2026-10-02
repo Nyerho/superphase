@@ -1,1 +1,100 @@
-{"routes":[{"path":"/","title":"Superphase Broker"},{"path":"/index.html","title":"Superphase Broker"},{"path":"/login.html","title":"Sign in | Superphase Broker"},{"path":"/register.html","title":"Create account | Superphase Broker"},{"path":"/admin.html","title":"Command center | Superphase Broker"},{"path":"/user-dashboard.html","title":"Dashboard | Superphase Broker"}]}
+{
+  "routes": [
+    {
+      "path": "/",
+      "title": "Home | Vertix Trade"
+    },
+    {
+      "path": "/index.html",
+      "title": "Home | Vertix Trade"
+    },
+    {
+      "path": "/login.html",
+      "title": "Sign in | Vertix Trade"
+    },
+    {
+      "path": "/register.html",
+      "title": "Create account | Vertix Trade"
+    },
+    {
+      "path": "/admin.html",
+      "title": "Command center | Vertix Trade"
+    },
+    {
+      "path": "/dashboard.html",
+      "title": "Member dashboard alias | Vertix Trade"
+    },
+    {
+      "path": "/user-dashboard.html",
+      "title": "Overview | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/deposits.html",
+      "title": "Deposit preview | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/withdrawals.html",
+      "title": "Withdrawal preview | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/trade.html",
+      "title": "Trade preview | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/copy-trading.html",
+      "title": "Copy experts | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/buy-plan.html",
+      "title": "Plans | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/digitals-gallery.html",
+      "title": "Digital gallery | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/signals.html",
+      "title": "Signal desk | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/loans/apply.html",
+      "title": "Financing enquiry | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/tradinghistory.html",
+      "title": "Trade history | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/accounthistory.html",
+      "title": "Transactions | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/news.html",
+      "title": "Market notes | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/account-settings.html",
+      "title": "Account settings | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/profile.html",
+      "title": "Your profile | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/referuser.html",
+      "title": "Referrals | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/technical.html",
+      "title": "Technical view | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/chart.html",
+      "title": "Market chart | Vertix Trade"
+    },
+    {
+      "path": "/dashboard/calendar.html",
+      "title": "Market calendar | Vertix Trade"
+    }
+  ]
+}
