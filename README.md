@@ -22,3 +22,5 @@ A self-contained glassmorphism trading platform front end rebuilt from the suppl
 No browser `localStorage` or `sessionStorage` is used. Until real credentials are added, the auth and admin screens use clearly labeled in-memory preview behavior so the UI remains testable without persisting anything.
 
 The Jivo widget and all visible original project branding have been removed. The legacy vendor folders are retained only to avoid breaking the supplied archive's original directory structure; the new pages do not load them.
+
+The member dashboard preserves the supplied dashboard structure (header, sidebar, KPI blocks, live trading controls, chart widgets, and footer) with the Superphase glassmorphism override in `css/legacy-dashboard.css`.
