@@ -8,6 +8,7 @@ A self-contained glassmorphism trading platform front end rebuilt from the suppl
 - `login.html` — Firebase-ready sign-in page
 - `register.html` — Firebase-ready registration page
 - `admin.html` — command center with in-memory preview CRUD and Firestore-ready persistence
+- `user-dashboard.html` — member dashboard with portfolio, watchlist, signals, and activity
 - `dashboard.html` — compatibility alias that redirects to `admin.html`
 
 ## Firebase / Firestore handoff
