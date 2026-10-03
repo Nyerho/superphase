@@ -1,1 +1,29 @@
-{"routes":[{"path":"/","title":"Superphase Broker"},{"path":"/index.html","title":"Superphase Broker"},{"path":"/login.html","title":"Sign in | Superphase Broker"},{"path":"/register.html","title":"Create account | Superphase Broker"},{"path":"/admin.html","title":"Command center | Superphase Broker"},{"path":"/user-dashboard.html","title":"Dashboard | Superphase Broker"}]}
+{
+  "routes": [
+    { "path": "/", "title": "Home | Vertix Trade" },
+    { "path": "/index.html", "title": "Home | Vertix Trade" },
+    { "path": "/login.html", "title": "Sign in | Vertix Trade" },
+    { "path": "/register.html", "title": "Create account | Vertix Trade" },
+    { "path": "/verify-email.html", "title": "Verify email | Vertix Trade" },
+    { "path": "/admin.html", "title": "Admin | Vertix Trade" },
+    { "path": "/dashboard.html", "title": "Account | Vertix Trade" },
+    { "path": "/user-dashboard.html", "title": "Account | Vertix Trade" },
+    { "path": "/dashboard/deposits.html", "title": "Deposit | Vertix Trade" },
+    { "path": "/dashboard/withdrawals.html", "title": "Withdraw | Vertix Trade" },
+    { "path": "/dashboard/trade.html", "title": "Trade | Vertix Trade" },
+    { "path": "/dashboard/copy-trading.html", "title": "Copy Experts | Vertix Trade" },
+    { "path": "/dashboard/buy-plan.html", "title": "Subscribe | Vertix Trade" },
+    { "path": "/dashboard/digitals-gallery.html", "title": "NFTs | Vertix Trade" },
+    { "path": "/dashboard/signals.html", "title": "Signal | Vertix Trade" },
+    { "path": "/dashboard/loans/apply.html", "title": "Loan | Vertix Trade" },
+    { "path": "/dashboard/tradinghistory.html", "title": "History | Vertix Trade" },
+    { "path": "/dashboard/accounthistory.html", "title": "Transactions | Vertix Trade" },
+    { "path": "/dashboard/news.html", "title": "News | Vertix Trade" },
+    { "path": "/dashboard/account-settings.html", "title": "Account Settings | Vertix Trade" },
+    { "path": "/dashboard/profile.html", "title": "Profile | Vertix Trade" },
+    { "path": "/dashboard/referuser.html", "title": "Referrals | Vertix Trade" },
+    { "path": "/dashboard/technical.html", "title": "Technical Analysis | Vertix Trade" },
+    { "path": "/dashboard/chart.html", "title": "Live Market Chart | Vertix Trade" },
+    { "path": "/dashboard/calendar.html", "title": "Market Calendar | Vertix Trade" }
+  ]
+}
