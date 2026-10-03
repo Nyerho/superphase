@@ -17,3 +17,43 @@
 .cta-band .button-white{background:#101112;color:#f5c400}
 /* Primary yellow controls use dark labels for legible contrast. */
 .button-primary,.button-primary:hover{color:#111!important}
+
+/* Universal account registration */
+.auth-wrap-wide{width:min(820px,100%)}
+.auth-card-wide{padding:36px}
+.registration-form{gap:20px}
+.registration-section-title{padding-top:8px;border-top:1px solid var(--line);color:var(--accent);font:500 10px 'DM Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
+.registration-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.registration-grid label{display:grid;gap:7px;color:#d1d3d6;font-size:11px}
+.registration-grid .registration-full{grid-column:1/-1}
+.registration-grid input,.registration-grid select{width:100%;min-height:43px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.22);padding:12px 14px;color:var(--white);font:inherit;font-size:12px;outline:none}
+.registration-grid select option{background:#111316;color:#fff}
+.registration-grid input:focus,.registration-grid select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,196,0,.1)}
+.field-optional{margin-left:5px;color:var(--dim);font:400 9px 'DM Mono',monospace}
+.field-hint{color:var(--dim);font:400 9px 'DM Mono',monospace;line-height:1.55}
+.form-status[data-tone="error"]{color:#ff9999}
+.form-status[data-tone="success"]{color:var(--accent)}
+@media(max-width:620px){.auth-card-wide{padding:24px}.registration-grid{grid-template-columns:1fr}.registration-grid .registration-full{grid-column:auto}}
+
+/* Firestore administration forms */
+.admin-content-grid-wide{grid-template-columns:repeat(2,minmax(0,1fr))}
+.admin-entry-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.16)}
+.admin-entry-form label{display:grid;gap:5px;color:var(--muted);font-size:10px}
+.admin-entry-form input,.admin-entry-form select{min-width:0;min-height:36px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#121416;color:var(--white);font:inherit;font-size:10px}
+.admin-entry-form button{align-self:end;min-height:36px}
+.admin-status{margin:-20px 0 18px}
+.admin-record-row,.admin-user-row,.admin-request-row{grid-template-columns:minmax(100px,1.4fr) minmax(55px,.8fr) minmax(55px,.8fr) minmax(45px,.6fr) auto}
+.admin-user-row{grid-template-columns:minmax(130px,1.4fr) minmax(80px,.8fr) minmax(55px,.5fr) minmax(90px,.8fr)}
+.admin-request-row{grid-template-columns:minmax(90px,1fr) minmax(70px,.7fr) minmax(70px,.7fr) minmax(130px,1fr)}
+.admin-record-row .crud-actions button{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:var(--muted)}
+.admin-main .form-status[data-tone="success"]{color:var(--accent)}
+@media(max-width:900px){.admin-content-grid-wide{grid-template-columns:1fr}}
+@media(max-width:620px){.admin-entry-form{grid-template-columns:1fr}.admin-user-row,.admin-request-row,.admin-record-row{grid-template-columns:1fr 1fr}.admin-user-row>*:first-child,.admin-request-row>*:first-child,.admin-record-row>*:first-child{grid-column:1/-1}}
+
+/* Live market-data mounts */
+#public-market-ticker{min-height:42px;display:flex;align-items:center;overflow:hidden}
+#public-market-ticker .tradingview-widget-container__widget{width:100%}
+.market-category-chart{width:100%;min-height:320px;overflow:hidden;border-radius:10px}
+.signal-empty{grid-column:1/-1;padding:26px;color:var(--muted);font:10px 'DM Mono',monospace;text-align:center}
+.dashboard-live-status{margin:0 0 14px;color:var(--accent);font-size:12px}
+.vt-request-status{min-height:20px;color:var(--accent);font-size:11px}

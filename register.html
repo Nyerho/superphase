@@ -1,1 +1,67 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="assets/vertix-trade-mark.png" type="image/png"><title>Create account | Vertix Trade</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/superphase.css"></head><body class="auth-body"><div class="site-backdrop"></div><div class="noise"></div><main class="auth-wrap"><div class="auth-card glass-panel"><a class="brand" href="index.html"><span class="brand-mark"><img src="assets/vertix-trade-mark.png" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a><div class="auth-heading"><div class="eyebrow"><span class="pulse-dot"></span> Make your next move</div><h1>Open an account.</h1><p>A clearer way to follow markets, signals, and your next move.</p></div><form class="auth-form" id="register-form"><label>Full name<input name="name" type="text" placeholder="Your full name" required autocomplete="name"></label><label>Email address<input name="email" type="email" placeholder="you@example.com" required autocomplete="email"></label><label>Password<input name="password" type="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password"></label><button class="button button-primary" type="submit">Create account <span>↗</span></button><p class="form-status" aria-live="polite"></p></form><p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p><p class="auth-note">By creating an account you agree to our terms. Connect your Firebase project in <b>js/firebase.js</b> to enable production auth.</p></div><a class="back-home" href="index.html">← Back to Vertix Trade</a></main><script type="module" src="js/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Create a Vertix Trade account.">
+  <link rel="icon" href="assets/vertix-trade-mark.png" type="image/png">
+  <title>Create account | Vertix Trade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/superphase.css">
+</head>
+<body class="auth-body">
+  <div class="site-backdrop"></div><div class="noise"></div>
+  <main class="auth-wrap auth-wrap-wide">
+    <div class="auth-card auth-card-wide glass-panel">
+      <a class="brand" href="index.html"><span class="brand-mark"><img src="assets/vertix-trade-mark.png" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a>
+      <div class="auth-heading">
+        <div class="eyebrow"><span class="pulse-dot"></span> Account registration</div>
+        <h1>Create your account.</h1>
+        <p>Enter your identity and contact details, then choose your account currency.</p>
+      </div>
+      <form class="auth-form registration-form" id="register-form" method="post" novalidate>
+        <div class="registration-section-title">Personal details</div>
+        <div class="registration-grid">
+          <label class="registration-full">Full legal name<input name="legalName" type="text" required maxlength="120" autocomplete="name" placeholder="As shown on your identity document"></label>
+          <label>Date of birth<input name="dateOfBirth" type="date" required autocomplete="bday"></label>
+          <label>Mobile phone<input name="phoneNumber" type="tel" required maxlength="30" autocomplete="tel" placeholder="Include country code"></label>
+          <label>Country of residence<input name="countryOfResidence" type="text" required maxlength="100" autocomplete="country-name" placeholder="Country"></label>
+          <label>Nationality <span class="field-optional">Optional</span><input name="nationality" type="text" maxlength="100" autocomplete="country-name" placeholder="Nationality"></label>
+        </div>
+
+        <div class="registration-section-title">Residential address</div>
+        <div class="registration-grid">
+          <label class="registration-full">Address line 1<input name="addressLine1" type="text" required maxlength="160" autocomplete="address-line1"></label>
+          <label class="registration-full">Address line 2 <span class="field-optional">Optional</span><input name="addressLine2" type="text" maxlength="160" autocomplete="address-line2"></label>
+          <label>City / town<input name="city" type="text" required maxlength="100" autocomplete="address-level2"></label>
+          <label>State / region <span class="field-optional">Optional</span><input name="region" type="text" maxlength="100" autocomplete="address-level1"></label>
+          <label>Postal code<input name="postalCode" type="text" required maxlength="24" autocomplete="postal-code"></label>
+          <label>Preferred account currency<select name="preferredCurrency" id="preferred-currency" required autocomplete="off"><option value="">Select a currency</option></select><span class="field-hint">This sets your account display preference; it does not convert funds.</span></label>
+        </div>
+
+        <div class="registration-section-title">Trading profile</div>
+        <div class="registration-grid">
+          <label>Employment status<select name="employmentStatus" required><option value="">Select status</option><option value="employed">Employed</option><option value="self_employed">Self-employed</option><option value="student">Student</option><option value="retired">Retired</option><option value="unemployed">Unemployed</option><option value="other">Other</option></select></label>
+          <label>Primary source of funds<select name="sourceOfFunds" required><option value="">Select source</option><option value="employment_income">Employment income</option><option value="business_income">Business income</option><option value="savings">Savings</option><option value="investment_income">Investment income</option><option value="pension">Pension</option><option value="other">Other</option></select></label>
+          <label>Trading experience<select name="tradingExperience" required><option value="">Select experience</option><option value="none">No previous experience</option><option value="under_1_year">Less than 1 year</option><option value="1_to_3_years">1–3 years</option><option value="3_to_5_years">3–5 years</option><option value="over_5_years">More than 5 years</option></select></label>
+          <label>Intended account use<select name="accountPurpose" required><option value="">Select account use</option><option value="active_trading">Active trading</option><option value="investing">Investing</option><option value="hedging">Hedging</option><option value="research">Market research</option><option value="other">Other</option></select></label>
+        </div>
+
+        <div class="registration-section-title">Sign-in details</div>
+        <div class="registration-grid">
+          <label class="registration-full">Email address<input name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"></label>
+          <label>Password<input name="password" type="password" required minlength="12" autocomplete="new-password" aria-describedby="password-guidance" placeholder="At least 12 characters"><span class="field-hint" id="password-guidance">Use at least 12 characters.</span></label>
+          <label>Confirm password<input name="confirmPassword" type="password" required minlength="12" autocomplete="new-password" placeholder="Enter the same password again"></label>
+        </div>
+        <p class="form-status" aria-live="polite"></p>
+        <button class="button button-primary" type="submit">Create account <span>↗</span></button>
+      </form>
+      <p class="auth-switch">Already registered? <a href="login.html">Sign in</a></p>
+    </div>
+    <a class="back-home" href="index.html">← Back to Vertix Trade</a>
+  </main>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

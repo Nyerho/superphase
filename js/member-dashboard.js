@@ -1,131 +1,322 @@
-const ROOT = document.body.dataset.root || './';
+import {
+  initializeFirebase,
+  requireMember,
+  listPublicRecords,
+  listUserRecords,
+  createUserRequest,
+  updateUserProfile,
+  saveUserSetting
+} from './firebase.js';
+import { activeNavKey, pageTitles, renderModernNavigation } from './dashboard-nav.js';
+
+const ROOT = document.body.dataset.root || '../';
 const pageKey = document.body.dataset.page || 'overview';
-const mark = `${ROOT}assets/vertix-trade-mark.png`;
-const navItems = [
-  { group: 'Workspace', items: [
-    ['overview', 'Overview', '◫', 'user-dashboard.html'],
-    ['deposits', 'Deposit', '＋', 'dashboard/deposits.html'],
-    ['withdrawals', 'Withdraw', '↗', 'dashboard/withdrawals.html'],
-    ['trade', 'Trade', '⌁', 'dashboard/trade.html'],
-    ['copy-trading', 'Copy experts', '◎', 'dashboard/copy-trading.html'],
-    ['buy-plan', 'Plans', '◇', 'dashboard/buy-plan.html'],
-    ['digitals-gallery', 'Digital gallery', '▧', 'dashboard/digitals-gallery.html'],
-    ['signals', 'Signals', '⌁', 'dashboard/signals.html'],
-    ['loans-apply', 'Loan enquiry', '▤', 'dashboard/loans/apply.html']
-  ]},
-  { group: 'Activity', items: [
-    ['tradinghistory', 'Trade history', '◷', 'dashboard/tradinghistory.html'],
-    ['accounthistory', 'Transactions', '⇄', 'dashboard/accounthistory.html'],
-    ['news', 'Market notes', '▤', 'dashboard/news.html']
-  ]},
-  { group: 'Tools', items: [
-    ['technical', 'Technical view', '⌁', 'dashboard/technical.html'],
-    ['chart', 'Market chart', '▥', 'dashboard/chart.html'],
-    ['calendar', 'Market calendar', '▦', 'dashboard/calendar.html']
-  ]},
-  { group: 'Account', items: [
-    ['profile', 'Profile', '◉', 'dashboard/profile.html'],
-    ['account-settings', 'Settings', '⚙', 'dashboard/account-settings.html'],
-    ['referuser', 'Referrals', '↗', 'dashboard/referuser.html']
-  ]}
-];
-const pageInfo = {
-  overview: ['Your overview', 'A clear view of your portfolio, watchlist, and next move.', 'ACCOUNT / OVERVIEW'],
-  deposits: ['Deposit preview', 'Review available funding methods. Requests here are illustrative and are not sent to a provider.', 'ACCOUNT / DEPOSIT'],
-  withdrawals: ['Withdrawal preview', 'Review a withdrawal request locally. No funds move in this preview.', 'ACCOUNT / WITHDRAW'],
-  trade: ['Trade preview', 'Build an order preview without submitting it to a broker or exchange.', 'MARKETS / TRADE'],
-  'copy-trading': ['Copy experts', 'Explore example strategies and review their profiles before connecting any live provider.', 'MARKETS / COPY EXPERTS'],
-  'buy-plan': ['Plans', 'Compare example membership tiers for the Vertix Trade workspace.', 'ACCOUNT / PLANS'],
-  'digitals-gallery': ['Digital gallery', 'Browse illustrative digital collectibles and portfolio cards.', 'EXPLORE / DIGITAL GALLERY'],
-  signals: ['Signal desk', 'Explore sample market brief subscriptions and their coverage.', 'MARKETS / SIGNALS'],
-  'loans-apply': ['Financing enquiry', 'Review an illustrative enquiry form. This preview does not submit a credit application.', 'ACCOUNT / FINANCING'],
-  tradinghistory: ['Trade history', 'Review sample order records and their preview statuses.', 'ACTIVITY / TRADE HISTORY'],
-  accounthistory: ['Transactions', 'A local preview of deposits, withdrawals, and account movements.', 'ACTIVITY / TRANSACTIONS'],
-  news: ['Market notes', 'A curated sample of market context for your watchlist.', 'INTELLIGENCE / MARKET NOTES'],
-  profile: ['Your profile', 'Manage the visible profile details attached to your member workspace.', 'ACCOUNT / PROFILE'],
-  'account-settings': ['Account settings', 'Adjust display preferences for this device preview.', 'ACCOUNT / SETTINGS'],
-  referuser: ['Referrals', 'Share a referral code and track illustrative invite activity.', 'ACCOUNT / REFERRALS'],
-  technical: ['Technical view', 'A compact, illustrative read on selected market indicators.', 'TOOLS / TECHNICAL VIEW'],
-  chart: ['Market chart', 'A lightweight illustrative chart panel. Values are sample data, not live quotes.', 'TOOLS / MARKET CHART'],
-  calendar: ['Market calendar', 'A sample schedule of upcoming market events and release windows.', 'TOOLS / MARKET CALENDAR']
+const appRoot = document.getElementById('app');
+const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const money = (value, currency) => {
+  if (value == null || value === '') return '—';
+  const number = Number(value);
+  if (!Number.isFinite(number) || !currency) return '—';
+  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(number); }
+  catch { return `${number.toLocaleString()} ${currency || ''}`.trim(); }
 };
-const money = (value) => `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const icon = (label, tone = '') => `<span class="asset-badge ${tone}" aria-hidden="true">${label}</span>`;
-const panel = (title, content, action = '') => `<section class="dash-panel glass-panel rise-in"><header class="panel-heading"><h2>${title}</h2>${action}</header>${content}</section>`;
-const marketRows = `
-  <div class="market-row market-head"><span>Asset</span><span>Price</span><span>24h</span><span>Trend</span></div>
-  <div class="market-row">${icon('₿','btc')}<span class="market-name"><b>Bitcoin</b><small>BTC / USD</small></span><b>$67,420.10</b><span class="up">+2.84%</span><span class="tiny-bars"><i></i><i></i><i></i><i></i><i></i></span></div>
-  <div class="market-row">${icon('Ξ','eth')}<span class="market-name"><b>Ethereum</b><small>ETH / USD</small></span><b>$3,518.42</b><span class="up">+1.26%</span><span class="tiny-bars bars-alt"><i></i><i></i><i></i><i></i><i></i></span></div>
-  <div class="market-row">${icon('Au','gold')}<span class="market-name"><b>Gold</b><small>XAU / USD</small></span><b>$2,342.60</b><span class="down">−0.31%</span><span class="tiny-bars bars-muted"><i></i><i></i><i></i><i></i><i></i></span></div>`;
-const chartSvg = `<svg class="portfolio-chart" viewBox="0 0 800 150" preserveAspectRatio="none" role="img" aria-label="Illustrative portfolio trend"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f5c400" stop-opacity=".28"/><stop offset="1" stop-color="#f5c400" stop-opacity="0"/></linearGradient></defs><path d="M0 122 C45 116 64 92 102 101 S158 82 190 94 S248 74 279 84 S332 93 363 63 S421 74 453 53 S507 67 540 48 S590 58 620 38 S675 54 708 31 S767 42 800 14 L800 150 L0 150Z" fill="url(#chartFill)"/><path d="M0 122 C45 116 64 92 102 101 S158 82 190 94 S248 74 279 84 S332 93 363 63 S421 74 453 53 S507 67 540 48 S590 58 620 38 S675 54 708 31 S767 42 800 14" fill="none" stroke="#f5c400" stroke-width="3" vector-effect="non-scaling-stroke"/></svg>`;
-function tradeForm(compact = false) {
-  return `<form class="trade-form" data-trade-form>
-    <label>Market<select name="market"><option>BTC / USD</option><option>ETH / USD</option><option>XAU / USD</option><option>EUR / USD</option></select></label>
-    <label>Order size (USD)<input name="amount" type="number" min="1" step="0.01" placeholder="Enter an amount" required></label>
-    ${compact ? '' : '<label>Timeframe<select name="timeframe"><option>1 hour</option><option>4 hours</option><option>1 day</option></select></label>'}
-    <div class="trade-actions"><button class="button button-primary" type="button" data-trade-side="buy">Preview buy <span>↗</span></button><button class="button button-outline" type="button" data-trade-side="sell">Preview sell <span>↘</span></button></div>
-    <p class="form-status" aria-live="polite">Preview only · no order is sent and no funds move.</p>
-  </form>`;
-}
-function contentFor(key) {
-  if (key === 'overview') return `
-    <div class="stat-grid"><article class="stat-card glass-panel rise-in"><small>Portfolio value · sample</small><strong>$24,680<span>.50</span></strong><p class="stat-positive">+ $1,240.80 <span>illustrative 30-day change</span></p></article><article class="stat-card glass-panel rise-in"><small>Open positions</small><strong>03</strong><p>2 markets · 1 watch</p></article><article class="stat-card glass-panel rise-in"><small>Watchlist</small><strong>08</strong><p>3 sample market moves</p></article><article class="stat-card glass-panel rise-in"><small>Risk setting</small><strong>Moderate</strong><p>Review before any live connection</p></article></div>
-    <div class="content-grid"><div>${panel('Portfolio trend <span class="sample-label">ILLUSTRATIVE DATA</span>', `<div class="chart-summary"><strong>$24,680.50</strong><span class="up">+5.3% <small>30 days</small></span></div>${chartSvg}<div class="chart-axis"><span>01 OCT</span><span>08 OCT</span><span>15 OCT</span><span>22 OCT</span><span>29 OCT</span></div>`)}${panel('Watchlist', `<div class="market-list">${marketRows}</div>`, `<a class="panel-link" href="${ROOT}dashboard/chart.html">Open chart ↗</a>`)}</div><div>${panel('Quick trade', tradeForm(true))}${panel('Recent activity', `<div class="activity-list"><div><i class="activity-dot"></i><span><b>BTC / USD</b><small>Buy preview · 0.05 BTC</small></span><time>Today</time></div><div><i class="activity-dot muted"></i><span><b>Deposit request</b><small>Preview only · USD</small></span><time>Yesterday</time></div><div><i class="activity-dot"></i><span><b>ETH / USD</b><small>Signal saved to watchlist</small></span><time>2 days</time></div></div>`, `<a class="panel-link" href="${ROOT}dashboard/tradinghistory.html">View history ↗</a>`)}</div></div>`;
-  if (key === 'trade') return `<div class="content-grid trade-layout"><div>${panel('Build an order preview', `<p class="panel-copy">Select a market and size, then preview the direction. Nothing is sent to an exchange from this static demo.</p>${tradeForm()}`)}${panel('Market snapshot', `<div class="market-list">${marketRows}</div>`)}</div><aside>${panel('Risk reminder', '<div class="notice-card"><span class="notice-icon">!</span><h3>Preview mode</h3><p>Live execution is not connected. Order buttons only validate and display a local preview; they cannot place a trade.</p></div>')}${panel('Execution settings', '<div class="detail-list"><div><span>Order type</span><b>Market preview</b></div><div><span>Settlement</span><b>Not connected</b></div><div><span>Available balance</span><b>Sample data</b></div></div>')}</aside></div>`;
-  if (key === 'deposits' || key === 'withdrawals') {
-    const isDeposit = key === 'deposits';
-    return `<div class="content-grid"><div>${panel(isDeposit ? 'Create a deposit request' : 'Create a withdrawal request', `<form class="standard-form" data-preview-form><label>Asset<select name="asset"><option>USD</option><option>BTC</option><option>ETH</option></select></label><label>Amount (USD)<input name="amount" type="number" min="1" step="0.01" required placeholder="0.00"></label>${isDeposit ? '<label>Funding method<select><option>Bank transfer (preview)</option><option>Digital asset (preview)</option></select></label>' : '<label>Destination reference<input name="destination" required placeholder="Enter a saved destination label"></label>'}<button class="button button-primary" type="submit">Review request ↗</button><p class="form-status" aria-live="polite">Local preview only · no payment request is transmitted.</p></form>`)}${panel('Before you continue', `<div class="notice-card"><span class="notice-icon">i</span><h3>${isDeposit ? 'Funding is not connected' : 'No funds will be moved'}</h3><p>This sample page is for interface review. Add an approved payment provider and server-side workflow before enabling real ${isDeposit ? 'deposits' : 'withdrawals'}.</p></div>`)}</div><aside>${panel('Account balance · sample', '<strong class="large-value">$24,680.50</strong><p class="muted-copy">Illustrative balance only</p>')}${panel('Recent requests', '<div class="detail-list"><div><span>Bank transfer</span><b>Preview</b></div><div><span>Digital asset</span><b>Not connected</b></div></div>')}</aside></div>`;
-  }
-  if (key === 'copy-trading') return `<div class="feature-grid">${[['Northstar Macro','Balanced multi-market sample strategy','+8.4%','Moderate risk'],['Momentum Lab','Short-horizon trend-following example','+6.2%','High risk'],['Atlas Allocation','Long-term diversified model portfolio','+4.7%','Lower risk']].map((x,i)=>`<article class="feature-card glass-panel rise-in"><div class="feature-top"><span class="expert-avatar">${['N','M','A'][i]}</span><span class="status-tag">SAMPLE PROFILE</span></div><h2>${x[0]}</h2><p>${x[1]}</p><div class="feature-metrics"><div><small>30-day sample</small><b class="up">${x[2]}</b></div><div><small>Risk style</small><b>${x[3]}</b></div></div><button class="button button-outline" data-not-connected>View strategy <span>↗</span></button></article>`).join('')}</div><p class="inline-note" data-global-status aria-live="polite">Strategy data is illustrative. Copy execution is not connected.</p>`;
-  if (key === 'buy-plan') return `<div class="feature-grid plans-grid">${[['Starter','Market views, curated notes, and a personal watchlist','$0'],['Active','Expanded research, alerts, and workspace tools','$19'],['Pro','Advanced analytics and priority market brief','$49']].map((x,i)=>`<article class="feature-card glass-panel rise-in ${i===1?'featured':''}"><span class="status-tag">${i===1?'POPULAR SAMPLE':'EXAMPLE PLAN'}</span><h2>${x[0]}</h2><strong class="plan-price">${x[2]}<small>/ month</small></strong><p>${x[1]}</p><ul class="check-list"><li>Multi-market watchlists</li><li>Signal research summaries</li><li>Glass dashboard workspace</li></ul><button class="button ${i===1?'button-primary':'button-outline'}" data-not-connected>Review plan</button></article>`).join('')}</div><p class="inline-note" data-global-status aria-live="polite">Plan selection is a non-purchasing preview. Billing is not connected.</p>`;
-  if (key === 'digitals-gallery') return `<div class="feature-grid">${[['01','Signal / 01','Digital insight card','Gold'],['02','Market / 02','Workspace collectible','Carbon'],['03','Momentum / 03','Trend study edition','Amber']].map((x,i)=>`<article class="collectible-card glass-panel rise-in"><div class="collectible-art art-${i+1}"><span>${x[0]}</span><b>V</b><small>VERTIX / SAMPLE</small></div><h2>${x[1]}</h2><p>${x[2]} · ${x[3]} edition</p><button class="button button-outline" data-not-connected>View details</button></article>`).join('')}</div><p class="inline-note">Illustrative showcase only; there are no listed or purchasable assets.</p>`;
-  if (key === 'signals') return `<div class="content-grid">${panel('Signal coverage', `<div class="signal-cards">${[['Digital assets','BTC · ETH · SOL','4 sample notes / week'],['Macro & FX','EUR · USD · GBP','2 sample notes / week'],['Commodities','Gold · Oil · Silver','1 sample note / week']].map(x=>`<article class="signal-card"><div>${icon('↗','gold')}<span><b>${x[0]}</b><small>${x[1]}</small></span></div><p>${x[2]}</p><button class="button button-outline" data-not-connected>Preview coverage</button></article>`).join('')}</div>`)}${panel('Signal note · sample', '<div class="sample-label">BTC / USD · 4H</div><h3>Momentum remains constructive</h3><p class="panel-copy">This mock note demonstrates the layout only. It is not a current market call or a recommendation.</p><div class="detail-list"><div><span>Confidence</span><b>72% · sample</b></div><div><span>Review window</span><b>4 hours</b></div></div>')}</div>`;
-  if (key === 'loans-apply') return `<div class="content-grid">${panel('Financing enquiry preview', '<form class="standard-form" data-preview-form><label>Requested amount<input name="amount" type="number" min="1" required placeholder="Enter an amount"></label><label>Purpose<select><option>Business working capital</option><option>Personal planning</option><option>Other</option></select></label><label>Additional context<textarea rows="4" placeholder="Share a brief note"></textarea></label><button class="button button-primary" type="submit">Review enquiry</button><p class="form-status" aria-live="polite">This form does not submit a credit or loan application.</p></form>')}${panel('Important information', '<div class="notice-card"><span class="notice-icon">!</span><h3>No lender is connected</h3><p>This is a layout preview only. Do not enter sensitive personal or financial data.</p></div>')}</div>`;
-  if (key === 'tradinghistory' || key === 'accounthistory') {
-    const trades = key === 'tradinghistory';
-    const rows = trades ? [['BTC / USD','Buy preview','0.05 BTC','$3,240.00','Today · 14:25'],['ETH / USD','Sell preview','0.40 ETH','$1,406.00','Yesterday · 09:18'],['XAU / USD','Watch only','—','$2,342.60','28 Sep · 16:40']] : [['Balance preview','Illustrative','+$480.00','Completed · sample','Today'],['Deposit request','Bank transfer','+$1,200.00','Preview only','Yesterday'],['Platform fee','Monthly plan','−$19.00','Sample entry','26 Sep']];
-    return panel(trades ? 'Recent trade activity' : 'Recent account activity', `<div class="table-wrap"><table><thead><tr>${(trades?['Market','Side','Size','Reference value','When']:['Type','Method','Amount','Status','When']).map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map((cell,i)=>`<td>${i===0?`<b>${cell}</b>`:cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="inline-note">Sample records only. Historical data is not connected to a live account.</p>`);
-  }
-  if (key === 'news') return `<div class="news-list">${[['MARKET STRUCTURE · 4 MIN READ','What calmer market dashboards can do for decision-making','A short editorial sample about separating signal from noise and keeping context close to the action.','02 OCT 2026'],['DIGITAL ASSETS · 6 MIN READ','Liquidity, volatility, and the value of a patient watchlist','An illustrative research-note layout for markets that can move quickly.','01 OCT 2026'],['MACRO · 3 MIN READ','Three calendar markers worth adding to your review','A practical format for tracking scheduled data releases without confusing a preview with a forecast.','29 SEP 2026']].map((x,i)=>`<article class="news-card glass-panel rise-in"><div class="news-index">0${i+1}</div><div><span class="sample-label">${x[0]}</span><h2>${x[1]}</h2><p>${x[2]}</p><small>${x[3]} · SAMPLE EDITORIAL</small></div><span class="news-arrow">↗</span></article>`).join('')}</div>`;
-  if (key === 'profile') return `<div class="content-grid">${panel('Member profile', '<div class="profile-block"><span class="profile-large">AM</span><div><h3>Avery Morgan</h3><p>Member · Sample profile</p><span class="status-tag">PREVIEW ACCOUNT</span></div></div><div class="detail-list"><div><span>Email</span><b>avery@example.com</b></div><div><span>Member since</span><b>September 2026 · sample</b></div><div><span>Workspace</span><b>Vertix Trade</b></div></div>')}${panel('Profile details', '<form class="standard-form" data-preview-form><label>Display name<input value="Avery Morgan" required></label><label>Preferred market<select><option>Digital assets</option><option>FX</option><option>Commodities</option></select></label><button class="button button-primary" type="submit">Preview changes</button><p class="form-status" aria-live="polite">Profile changes remain local to this page.</p></form>')}</div>`;
-  if (key === 'account-settings') return `<div class="content-grid">${panel('Display preferences', '<form class="standard-form" data-preview-form><label>Theme<select><option>Vertix dark · yellow accent</option><option>High contrast</option></select></label><label>Default market<select><option>BTC / USD</option><option>ETH / USD</option><option>XAU / USD</option></select></label><label class="toggle-row"><input type="checkbox" checked> Show sample market summaries</label><label class="toggle-row"><input type="checkbox"> Reduce motion</label><button class="button button-primary" type="submit">Apply preview settings</button><p class="form-status" aria-live="polite">These preview settings are not stored.</p></form>')}${panel('Privacy & access', '<div class="detail-list"><div><span>Authentication</span><b>Demo mode</b></div><div><span>Data storage</span><b>Not connected</b></div><div><span>Notifications</span><b>Preview only</b></div></div><p class="inline-note">Connect a production identity provider before collecting user data.</p>')}</div>`;
-  if (key === 'referuser') return `<div class="content-grid">${panel('Your referral code', '<p class="panel-copy">Share this sample code with a colleague. It is not linked to rewards or account attribution.</p><div class="referral-code"><code>VERTIX-AVERY-26</code><button class="button button-primary" data-copy-code>Copy code</button></div><p class="form-status" data-referral-status aria-live="polite"></p>')}${panel('Invite activity · sample', '<div class="stat-grid compact-stats"><article><small>Invites sent</small><b>08</b></article><article><small>Joined</small><b>03</b></article></div><p class="inline-note">Sample figures for the dashboard preview.</p>')}</div>`;
-  if (key === 'technical') return `<div class="feature-grid">${[['Trend','Constructive','Price above sample moving averages'],['Momentum','Balanced','RSI sample reading: 56'],['Volatility','Moderate','Illustrative 14-day range'],['Volume','Elevated','Sample volume vs. recent median']].map((x,i)=>`<article class="indicator-card glass-panel rise-in"><span class="sample-label">INDICATOR 0${i+1}</span><h2>${x[0]}</h2><strong>${x[1]}</strong><p>${x[2]}</p><div class="indicator-track"><i style="--meter:${[72,56,48,67][i]}%"></i></div></article>`).join('')}</div><p class="inline-note">All readings are illustrative and are not calculated from a live market feed.</p>`;
-  if (key === 'chart') return `${panel('BTC / USD · illustrative chart', '<div class="chart-legend"><span class="legend-dot"></span>Sample index <span class="sample-label">NOT LIVE</span></div>'+chartSvg+'<div class="chart-axis"><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span></div>')}<div class="market-list glass-panel standalone-list">${marketRows}</div>`;
-  if (key === 'calendar') return panel('Upcoming market events · sample schedule', `<div class="calendar-list">${[['03 OCT','09:00','Services activity release','EUR · Sample event'],['04 OCT','13:30','Labour market update','USD · Sample event'],['07 OCT','02:00','Policy rate decision','AUD · Sample event'],['09 OCT','15:00','Inventory report','Energy · Sample event']].map((x,i)=>`<article class="calendar-event rise-in"><div><b>${x[0]}</b><small>${x[1]} UTC</small></div><i class="event-line"></i><span><b>${x[2]}</b><small>${x[3]}</small></span><span class="status-tag">${i===0?'UPCOMING':'SCHEDULED'}</span></article>`).join('')}</div><p class="inline-note">Example layout only. Check official calendars for actual release schedules.</p>`);
-  return panel('Workspace', '<p class="panel-copy">This page is available as a Vertix Trade preview.</p>');
-}
-function render() {
-  const [title, description, crumb] = pageInfo[pageKey] || pageInfo.overview;
-  const nav = navItems.map(group => `<div class="nav-group"><span class="nav-label">${group.group}</span>${group.items.map(([key,label,markChar,path]) => `<a class="side-link ${key===pageKey?'active':''}" href="${ROOT}${path}" ${key===pageKey?'aria-current="page"':''}><span class="side-icon" aria-hidden="true">${markChar}</span>${label}</a>`).join('')}</div>`).join('');
+const dateText = (value) => value?.toDate ? value.toDate().toLocaleString() : '—';
+const panel = (title, body, action = '') => `<section class="dash-panel glass-panel rise-in"><header class="panel-heading"><h2>${title}</h2>${action}</header>${body}</section>`;
+const empty = (text) => `<div class="empty-state">${esc(text)}</div>`;
+const input = (label, name, type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" ${extra}></label>`;
+const fieldSelect = (label, name, options, extra = '') => `<label>${label}<select name="${name}" ${extra}>${options.map(([value, text]) => `<option value="${esc(value)}">${esc(text)}</option>`).join('')}</select></label>`;
+
+let session;
+let currency = '';
+let activeMarkets = [];
+
+function renderShell() {
+  const [title, description] = pageTitles[pageKey] || pageTitles.overview;
+  const nav = renderModernNavigation(activeNavKey(pageKey), ROOT);
   document.title = `${title} | Vertix Trade`;
-  document.getElementById('app').innerHTML = `
+  appRoot.innerHTML = `
     <div class="dashboard-layout">
-      <aside class="dashboard-sidebar" id="dashboard-sidebar"><a class="brand dashboard-brand" href="${ROOT}index.html"><span class="brand-mark"><img src="${mark}" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a><div class="member-card"><span class="member-avatar">AM</span><span><b>Avery Morgan</b><small>Member workspace</small></span><i class="online-dot"></i></div><nav class="dashboard-nav" aria-label="Member dashboard">${nav}</nav><div class="sidebar-bottom"><div class="support-glass"><small>NEED A HAND?</small><p>Explore the demo workspace with confidence.</p><a href="${ROOT}dashboard/account-settings.html">Workspace settings ↗</a></div><a class="side-link logout-link" href="${ROOT}index.html"><span class="side-icon">↩</span>Back to Vertix Trade</a></div></aside>
-      <main class="dashboard-main"><header class="dashboard-topbar"><button class="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><div class="breadcrumb">${crumb}</div><div class="topbar-actions"><span class="market-open"><i class="online-dot"></i> DEMO WORKSPACE</span><a class="topbar-icon" href="${ROOT}dashboard/profile.html" aria-label="Member profile">AM</a></div></header><section class="page-intro rise-in"><div><span class="eyebrow"><span class="pulse-dot"></span> VERTIX TRADE / MEMBER SPACE</span><h1>${title}</h1><p>${description}</p></div><a class="button button-outline desktop-top-action" href="${ROOT}dashboard/trade.html">Open trade preview <span>↗</span></a></section><div class="page-content">${contentFor(pageKey)}</div><footer class="dashboard-footer"><span>© 2026 Vertix Trade · Illustrative data only</span><span>Market tools · Not financial advice</span></footer></main>
-    </div><div class="sidebar-scrim" aria-hidden="true"></div><div class="toast-region" aria-live="polite" aria-atomic="true"></div>`;
-  bindInteractions();
+      <aside class="dashboard-sidebar" id="dashboard-sidebar">
+        <a class="brand dashboard-brand" href="${ROOT}index.html"><span class="brand-mark"><img src="${ROOT}assets/vertix-trade-mark.png" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a>
+        <div class="member-card"><span class="member-avatar" data-member-initials>VT</span><span><b data-member-name>Account holder</b><small>Member account</small></span><i class="online-dot"></i></div>
+        <nav class="dashboard-nav" aria-label="Member dashboard">${nav}</nav>
+        <div class="sidebar-bottom"><div class="support-glass"><small>SUPPORT</small><p>Contact Vertix Trade support.</p><a href="mailto:hello@vertixtrade.com">Email support ↗</a></div><a class="side-link logout-link" href="${ROOT}login.html" data-logout><span class="side-icon">↩</span>Logout</a></div>
+      </aside>
+      <main class="dashboard-main">
+        <header class="dashboard-topbar"><button class="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><div class="breadcrumb">ACCOUNT / ${esc(title.toUpperCase())}</div><div class="topbar-actions"><span class="market-open"><i class="online-dot"></i> <span data-account-status>Account</span></span><a class="topbar-icon" href="${ROOT}dashboard/profile.html" aria-label="Profile" data-member-initials>VT</a></div></header>
+        <section class="page-intro rise-in"><div><span class="eyebrow"><span class="pulse-dot"></span> VERTIX TRADE / MEMBER SPACE</span><h1>${esc(title)}</h1><p>${esc(description)}</p></div></section>
+        <div class="page-content" id="member-page-content">${empty('Loading account information…')}</div>
+        <footer class="dashboard-footer"><span>© 2026 Vertix Trade</span><span>Account services</span></footer>
+      </main>
+    </div>`;
+
+  const toggle = document.querySelector('.mobile-nav-toggle');
+  toggle?.addEventListener('click', () => {
+    const sidebar = document.getElementById('dashboard-sidebar');
+    const opened = sidebar.classList.toggle('mobile-open');
+    toggle.setAttribute('aria-expanded', String(opened));
+  });
+  document.addEventListener('click', async (event) => {
+    if (!event.target.closest('[data-logout]')) return;
+    event.preventDefault();
+    const { signOutUser } = await import('./firebase.js');
+    await signOutUser();
+    window.location.assign(`${ROOT}login.html`);
+  });
 }
-function showToast(message) {
-  const region = document.querySelector('.toast-region');
-  const toast = document.createElement('div'); toast.className = 'toast-message'; toast.textContent = message; region.replaceChildren(toast);
-  window.setTimeout(() => toast.remove(), 4400);
+
+function renderTable(title, headings, rows) {
+  if (!rows.length) return panel(title, empty('No records are available.'));
+  return panel(title, `<div class="table-wrap"><table><thead><tr>${headings.map((item) => `<th>${esc(item)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`);
 }
-function bindInteractions() {
-  document.querySelectorAll('[data-trade-side]').forEach(button => button.addEventListener('click', () => {
-    const form = button.closest('[data-trade-form]'); const input = form.elements.amount; const status = form.querySelector('.form-status');
-    const amount = Number(input.value); if (!Number.isFinite(amount) || amount <= 0) { input.focus(); status.textContent = 'Enter a valid amount greater than zero to preview this order.'; status.classList.add('status-error'); return; }
-    const market = form.elements.market.value; const direction = button.dataset.tradeSide.toUpperCase();
-    status.classList.remove('status-error'); status.textContent = `${direction} preview ready · ${money(amount)} of ${market}. Not submitted; no funds move.`;
-    showToast(`${direction} preview created for ${market} (${money(amount)}). No order was sent.`);
+
+function requestForm(type) {
+  if (!currency) return panel('Account currency', `<p class="muted-copy">Select your account currency in settings before submitting an amount request.</p><a class="button button-outline" href="${ROOT}dashboard/account-settings.html">Open Account Settings</a>`);
+  if (type === 'trade') {
+    const options = activeMarkets.map((item) => [item.symbol || item.id, `${item.displayName || item.symbol} · ${item.symbol}`]);
+    if (!options.length) return panel('Trade order request', empty('No markets are currently listed.'));
+    return panel('Trade order request', `<form method="post" class="standard-form" data-request-form="trade">
+      ${fieldSelect('Market', 'symbol', options, 'required')}
+      ${fieldSelect('Side', 'side', [['buy', 'Buy'], ['sell', 'Sell']], 'required')}
+      ${input('Order size', 'amount', 'number', 'min="0.01" step="0.01" required')}
+      ${fieldSelect('Duration', 'duration', [['1h', '1 hour'], ['4h', '4 hours'], ['1d', '1 day']], 'required')}
+      <button class="button button-primary" type="submit">Submit order request ↗</button>
+      <p class="form-status" aria-live="polite">Requests are recorded in your account with a submitted status.</p>
+    </form>`);
+  }
+
+  const isDeposit = type === 'deposit';
+  const labels = isDeposit ? 'Deposit request' : 'Withdrawal request';
+  const form = `<form method="post" class="standard-form" data-request-form="${type}">
+    ${input(`Amount (${currency})`, 'amount', 'number', 'min="0.01" step="0.01" required')}
+    ${isDeposit
+      ? fieldSelect('Funding method', 'method', [['bank_transfer', 'Bank transfer'], ['digital_asset', 'Digital asset']], 'required')
+      : input('Saved destination reference', 'destination', 'text', 'maxlength="100" required')}
+    <button class="button button-primary" type="submit">Submit ${isDeposit ? 'deposit' : 'withdrawal'} request ↗</button>
+    <p class="form-status" aria-live="polite">Your request will be recorded in your account for review.</p>
+  </form>`;
+  return panel(labels, form);
+}
+
+async function renderPage() {
+  const content = document.getElementById('member-page-content');
+  const uid = session.user.uid;
+  const profile = session.profile;
+  currency = profile.preferredCurrency || '';
+  activeMarkets = (await listPublicRecords('marketAssets')).filter((item) => item.active !== false);
+  const [requests, trades, transactions] = await Promise.all([
+    listUserRecords(uid, 'requests'),
+    listUserRecords(uid, 'trades'),
+    listUserRecords(uid, 'transactions')
+  ]);
+  const byTime = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+  const userRequests = requests.slice().sort(byTime);
+
+  if (pageKey === 'deposits' || pageKey === 'withdrawals') {
+    const type = pageKey === 'deposits' ? 'deposit' : 'withdrawal';
+    const filtered = userRequests.filter((item) => item.type === type);
+    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(item.method || item.destination || '—')} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small></span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
+  } else if (pageKey === 'trade') {
+    const mine = userRequests.filter((item) => item.type === 'trade');
+    const rows = mine.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
+    content.innerHTML = `<div class="content-grid"><div>${requestForm('trade')}${renderTable('Order requests', ['Market', 'Side', 'Size', 'Status', 'Submitted'], rows)}</div><aside>${panel('Account balance', `<strong class="large-value">${esc(profile.balance == null ? '—' : money(profile.balance, currency))}</strong><p class="muted-copy">${esc(currency)}</p>`)}</aside></div>`;
+  } else if (pageKey === 'tradinghistory') {
+    const rows = trades.slice().sort(byTime).map((item) => `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
+    content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Status', 'Date'], rows);
+  } else if (pageKey === 'accounthistory') {
+    const rows = [...transactions, ...userRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
+    content.innerHTML = renderTable('Transactions', ['Type', 'Details', 'Amount', 'Status', 'Date'], rows);
+  } else if (pageKey === 'copy-trading') {
+    const strategies = await listPublicRecords('copyStrategies');
+    content.innerHTML = strategies.length ? `<div class="feature-grid">${strategies.map((item) => `<article class="feature-card glass-panel rise-in"><span class="status-tag">${esc(item.status || 'Available')}</span><h2>${esc(item.name || 'Strategy')}</h2><p>${esc(item.description || '')}</p><div class="feature-metrics"><div><small>Risk level</small><b>${esc(item.riskLevel || '—')}</b></div><div><small>Provider</small><b>${esc(item.provider || '—')}</b></div></div></article>`).join('')}</div>` : empty('No copy strategies are available.');
+  } else if (pageKey === 'buy-plan') {
+    const plans = await listPublicRecords('plans');
+    content.innerHTML = plans.length ? `<div class="feature-grid plans-grid">${plans.map((item) => `<article class="feature-card glass-panel rise-in"><span class="status-tag">${esc(item.status || 'Available')}</span><h2>${esc(item.name || 'Plan')}</h2><strong class="plan-price">${esc(money(item.price, item.currency || currency))}<small>${esc(item.billingPeriod || '')}</small></strong><p>${esc(item.description || '')}</p><button class="button button-outline" data-plan-request="${esc(item.id)}">Request subscription</button></article>`).join('')}</div>` : empty('No subscription plans are available.');
+  } else if (pageKey === 'digitals-gallery') {
+    const assets = await listPublicRecords('digitalAssets');
+    content.innerHTML = assets.length ? `<div class="feature-grid">${assets.map((item) => `<article class="collectible-card glass-panel rise-in"><div class="collectible-art"><span>${esc(item.edition || '')}</span><b>V</b><small>${esc(item.category || 'Vertix Trade')}</small></div><h2>${esc(item.name || 'Digital asset')}</h2><p>${esc(item.description || '')}</p></article>`).join('')}</div>` : empty('No digital assets are available.');
+  } else if (pageKey === 'signals') {
+    const signals = await listPublicRecords('signals');
+    const rows = signals.filter((item) => !/closed/i.test(item.status || '')).map((item) => { const confidence = item.confidence == null ? NaN : Number(item.confidence); return `<tr><td><b>${esc(item.asset || '—')}</b></td><td>${esc(item.pair || '—')}</td><td>${esc(item.direction || '—')}</td><td>${esc(item.timeframe || '—')}</td><td>${Number.isFinite(confidence) ? `${Math.max(0, Math.min(100, confidence))}%` : '—'}</td><td>${esc(item.status || '—')}</td></tr>`; });
+    content.innerHTML = renderTable('Published signals', ['Asset', 'Pair', 'Direction', 'Timeframe', 'Confidence', 'Status'], rows);
+  } else if (pageKey === 'loans-apply') {
+    if (!currency) { content.innerHTML = panel('Account currency', `<p class="muted-copy">Select your account currency in settings before submitting an amount request.</p><a class="button button-outline" href="${ROOT}dashboard/account-settings.html">Open Account Settings</a>`); bindForms(); return; }
+    const loanRequests = userRequests.filter((item) => item.type === 'loan');
+    const form = `<form method="post" class="standard-form" data-request-form="loan">${input(`Requested amount (${currency})`, 'amount', 'number', 'min="0.01" step="0.01" required')}${fieldSelect('Purpose', 'purpose', [['business', 'Business'], ['personal', 'Personal'], ['other', 'Other']], 'required')}<label>Additional information<textarea name="message" rows="4" maxlength="1000"></textarea></label><button class="button button-primary" type="submit">Submit loan enquiry ↗</button><p class="form-status" aria-live="polite">Your enquiry will be recorded in your account.</p></form>`;
+    content.innerHTML = `<div class="content-grid"><div>${panel('Loan enquiry', form)}${renderTable('Enquiry history', ['Type', 'Purpose', 'Amount', 'Status', 'Date'], loanRequests.map((item) => `<tr><td><b>Loan enquiry</b></td><td>${esc(item.purpose || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`))}</div><aside>${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong>`)}</aside></div>`;
+  } else if (pageKey === 'news') {
+    const items = await listPublicRecords('news');
+    content.innerHTML = items.length ? `<div class="news-list">${items.map((item) => `<article class="news-card glass-panel rise-in"><div class="news-index">↗</div><div><span class="content-label">${esc(item.category || 'News')}</span><h2>${esc(item.title || 'Market update')}</h2><p>${esc(item.summary || item.body || '')}</p><small>${esc(dateText(item.publishedAt || item.createdAt))}</small></div></article>`).join('')}</div>` : empty('No market updates are available.');
+  } else if (pageKey === 'profile') {
+    const form = `<form method="post" class="standard-form" data-profile-form>
+      ${input('Mobile phone', 'phoneNumber', 'tel', `required maxlength="30" value="${esc(profile.phoneNumber || '')}"`)}
+      ${input('Address line 1', 'addressLine1', 'text', `required maxlength="160" value="${esc(profile.addressLine1 || '')}"`)}
+      ${input('Address line 2', 'addressLine2', 'text', `maxlength="160" value="${esc(profile.addressLine2 || '')}"`)}
+      ${input('City / town', 'city', 'text', `required maxlength="100" value="${esc(profile.city || '')}"`)}
+      ${input('State / region', 'region', 'text', `maxlength="100" value="${esc(profile.region || '')}"`)}
+      ${input('Postal code', 'postalCode', 'text', `required maxlength="24" value="${esc(profile.postalCode || '')}"`)}
+      <button class="button button-primary" type="submit">Save profile</button><p class="form-status" aria-live="polite"></p>
+    </form>`;
+    content.innerHTML = `<div class="content-grid"><div>${panel('Profile details', `<div class="profile-block"><span class="profile-large">${esc((profile.legalName || 'VT').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase())}</span><div><h3>${esc(profile.legalName || 'Account holder')}</h3><p>${esc(session.user.email || '')}</p></div></div><div class="detail-list"><div><span>Country of residence</span><b>${esc(profile.countryOfResidence || '—')}</b></div><div><span>Nationality</span><b>${esc(profile.nationality || '—')}</b></div><div><span>Date of birth</span><b>${esc(profile.dateOfBirth || '—')}</b></div><div><span>Preferred currency</span><b>${esc(currency)}</b></div><div><span>Account status</span><b>${esc(profile.accountStatus || '—')}</b></div></div>`)}</div><aside>${panel('Contact and address', form)}</aside></div>`;
+  } else if (pageKey === 'account-settings') {
+    const settings = await listUserRecords(uid, 'settings');
+    const ui = settings.find((item) => item.id === 'ui') || {};
+    const currencyOptions = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('currency') : ['AUD', 'CAD', 'CHF', 'CNY', 'EUR', 'GBP', 'INR', 'JPY', 'NGN', 'NZD', 'SGD', 'USD', 'ZAR'];
+    const currencySelect = `<label>Preferred account currency<select name="preferredCurrency" required><option value="">Select a currency</option>${currencyOptions.map((code) => `<option value="${esc(code)}" ${code === currency ? 'selected' : ''}>${esc(code)}</option>`).join('')}</select></label>`;
+    const form = `<form method="post" class="standard-form" data-settings-form>${currencySelect}<label class="toggle-row"><input name="reduceMotion" type="checkbox" ${ui.reduceMotion ? 'checked' : ''}> Reduce motion</label><button class="button button-primary" type="submit">Save settings</button><p class="form-status" aria-live="polite"></p></form>`;
+    content.innerHTML = `<div class="content-grid"><div>${panel('Display preferences', form)}</div><aside>${panel('Account information', `<div class="detail-list"><div><span>Email</span><b>${esc(session.user.email || '—')}</b></div><div><span>Account status</span><b>${esc(profile.accountStatus || '—')}</b></div><div><span>Verification status</span><b>${esc(session.user.emailVerified ? 'Email verified' : 'Email verification required')}</b></div></div>`)}</aside></div>`;
+  } else if (pageKey === 'referuser') {
+    const referrals = await listUserRecords(uid, 'referrals');
+    content.innerHTML = `<div class="content-grid"><div>${panel('Your referral code', `<p class="panel-copy">Share this code with people you invite to Vertix Trade.</p><div class="referral-code"><code>${esc(profile.referralCode || '—')}</code><button class="button button-primary" type="button" data-copy-code>Copy code</button></div><p class="form-status" data-referral-status aria-live="polite"></p>`)}</div><aside>${panel('Referral activity', `<div class="stat-grid compact-stats"><article><small>Recorded referrals</small><b>${referrals.length}</b></article></div>`)}</aside></div>`;
+  } else if (pageKey === 'technical') {
+    const signals = await listPublicRecords('signals');
+    const analysis = signals.filter((item) => item.technicalSummary || item.analysis);
+    content.innerHTML = analysis.length ? `<div class="feature-grid">${analysis.map((item) => `<article class="indicator-card glass-panel rise-in"><span class="content-label">${esc(item.pair || item.asset || '')}</span><h2>${esc(item.title || 'Technical analysis')}</h2><strong>${esc(item.direction || '')}</strong><p>${esc(item.technicalSummary || item.analysis)}</p></article>`).join('')}</div>` : empty('No technical analysis has been published.');
+  } else if (pageKey === 'chart') {
+    const marketOptions = activeMarkets.filter((item) => item.tradingViewSymbol);
+    const select = `<label>Market<select id="chart-market">${marketOptions.map((item) => `<option value="${esc(item.tradingViewSymbol)}">${esc(item.displayName || item.symbol)}</option>`).join('')}</select></label>`;
+    content.innerHTML = marketOptions.length ? `${panel('Live market chart', `${select}<div id="member-tradingview-chart" class="market-chart-frame"></div>`)}<p class="inline-note">Market chart data is provided by TradingView.</p>` : empty('No chart-enabled markets are listed.');
+    if (marketOptions.length) mountTradingViewChart(marketOptions[0].tradingViewSymbol, 'member-tradingview-chart');
+    document.getElementById('chart-market')?.addEventListener('change', (event) => mountTradingViewChart(event.target.value, 'member-tradingview-chart'));
+  } else if (pageKey === 'calendar') {
+    const items = await listPublicRecords('marketCalendar');
+    const events = items.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+    content.innerHTML = events.length ? panel('Market events', `<div class="calendar-list">${events.map((item) => `<article class="calendar-event rise-in"><div><b>${esc(item.date || '—')}</b><small>${esc(item.time || '')}</small></div><i class="event-line"></i><span><b>${esc(item.title || 'Market event')}</b><small>${esc(item.market || item.currency || '')}</small></span><span class="status-tag">${esc(item.status || '')}</span></article>`).join('')}</div>`) : empty('No market events are scheduled.');
+  } else {
+    content.innerHTML = empty('No page content is available.');
+  }
+
+  bindForms();
+}
+
+function mountTradingViewChart(symbol, targetId) {
+  const target = document.getElementById(targetId);
+  if (!target || !/^[A-Z0-9:_-]+$/i.test(symbol || '')) return;
+  target.replaceChildren();
+  const script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/tv.js';
+  script.onload = () => {
+    if (window.TradingView?.widget) {
+      new window.TradingView.widget({ autosize: true, symbol, interval: '60', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en', container_id: targetId });
+    }
+  };
+  target.append(script);
+}
+
+function bindForms() {
+  document.querySelectorAll('[data-request-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const type = form.dataset.requestForm;
+      const fields = { currency };
+      for (const key of ['amount', 'symbol', 'side', 'duration', 'method', 'destination', 'purpose', 'message']) {
+        if (data.has(key)) fields[key] = key === 'amount' ? Number(data.get(key)) : String(data.get(key)).trim();
+      }
+      if (type !== 'support' && !currency) {
+        setFormStatus(form, 'Select an account currency in Account Settings before submitting an amount request.');
+        return;
+      }
+      if (type === 'trade' && (!fields.symbol || !activeMarkets.some((item) => (item.symbol || item.id) === fields.symbol))) {
+        setFormStatus(form, 'Select a listed market.');
+        return;
+      }
+      if (fields.amount !== undefined && (!Number.isFinite(fields.amount) || fields.amount <= 0)) {
+        setFormStatus(form, 'Enter an amount greater than zero.');
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const id = await createUserRequest(session.user.uid, type, fields);
+        setFormStatus(form, `Request submitted. Reference: ${id}`, 'success');
+        form.reset();
+        await renderPage();
+      } catch (error) {
+        setFormStatus(form, error.message || 'Your request could not be submitted.');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelector('[data-profile-form]')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form).entries());
+    try {
+      await updateUserProfile(session.user.uid, values);
+      session.profile = { ...session.profile, ...values };
+      setFormStatus(form, 'Profile saved.', 'success');
+    } catch (error) {
+      setFormStatus(form, error.message || 'Your profile could not be saved.');
+    }
+  });
+
+  document.querySelector('[data-settings-form]')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      const newCurrency = String(data.get('preferredCurrency') || currency);
+      await updateUserProfile(session.user.uid, { preferredCurrency: newCurrency });
+      await saveUserSetting(session.user.uid, 'ui', { reduceMotion: data.has('reduceMotion') });
+      session.profile.preferredCurrency = newCurrency;
+      setFormStatus(form, 'Settings saved.', 'success');
+      await renderPage();
+    } catch (error) {
+      setFormStatus(form, error.message || 'Your settings could not be saved.');
+    }
+  });
+
+  document.querySelectorAll('[data-plan-request]').forEach((button) => button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      if (!currency) throw new Error('Select an account currency in Account Settings before submitting a subscription request.');
+      const plan = (await listPublicRecords('plans')).find((item) => item.id === button.dataset.planRequest);
+      if (!plan) throw new Error('This plan is no longer available.');
+      await createUserRequest(session.user.uid, 'plan', { planId: plan.id, amount: Number(plan.price) || 0, currency: plan.currency || currency });
+      button.textContent = 'Request submitted';
+    } catch (error) {
+      button.disabled = false;
+      window.alert(error.message || 'The request could not be submitted.');
+    }
   }));
-  document.querySelectorAll('[data-preview-form]').forEach(form => form.addEventListener('submit', event => {
-    event.preventDefault(); const status = form.querySelector('.form-status'); if (status) { status.classList.remove('status-error'); status.textContent = 'Preview saved on this page only. Nothing was submitted or stored.'; } showToast('Preview updated locally. No request was transmitted.');
-  }));
-  document.querySelectorAll('[data-not-connected]').forEach(button => button.addEventListener('click', () => showToast('This is a design preview. No provider or purchase is connected.')));
-  document.querySelector('[data-copy-code]')?.addEventListener('click', async () => { const status=document.querySelector('[data-referral-status]'); try { await navigator.clipboard.writeText('VERTIX-AVERY-26'); status.textContent='Sample referral code copied.'; } catch { status.textContent='Sample code: VERTIX-AVERY-26'; } });
-  const toggle=document.querySelector('.mobile-nav-toggle'), scrim=document.querySelector('.sidebar-scrim'), sidebar=document.querySelector('.dashboard-sidebar');
-  const closeMenu=()=>{sidebar.classList.remove('open');scrim.classList.remove('visible');toggle.setAttribute('aria-expanded','false');};
-  toggle.addEventListener('click',()=>{const open=sidebar.classList.toggle('open');scrim.classList.toggle('visible',open);toggle.setAttribute('aria-expanded',String(open));}); scrim.addEventListener('click',closeMenu);
+
+  document.querySelector('[data-copy-code]')?.addEventListener('click', async () => {
+    const target = document.querySelector('[data-referral-status]');
+    try {
+      await navigator.clipboard.writeText(session.profile.referralCode || '');
+      target.textContent = 'Referral code copied.';
+    } catch {
+      target.textContent = session.profile.referralCode || '';
+    }
+  });
 }
-render();
+
+function setFormStatus(form, message, tone = 'error') {
+  const target = form.querySelector('.form-status');
+  if (target) {
+    target.textContent = message;
+    target.dataset.tone = tone;
+  }
+}
+
+async function start() {
+  await initializeFirebase();
+  session = await requireMember();
+  if (!session) return;
+  renderShell();
+  const displayName = session.profile.legalName || session.user.displayName || 'Account holder';
+  document.querySelectorAll('[data-member-name]').forEach((node) => { node.textContent = displayName; });
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+  document.querySelectorAll('[data-member-initials]').forEach((node) => { node.textContent = initials || 'VT'; });
+  const status = session.profile.accountStatus || 'Account';
+  document.querySelectorAll('[data-account-status]').forEach((node) => { node.textContent = status.replaceAll('_', ' '); });
+  await renderPage();
+}
+
+start().catch((error) => {
+  if (!appRoot) return;
+  appRoot.innerHTML = `<main class="page-loading">${esc(error.message || 'Account information could not be loaded.')}</main>`;
+});

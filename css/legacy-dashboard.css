@@ -8,5 +8,4 @@ html,body{background:var(--sp-ink)!important;color:var(--sp-white)!important;fon
 .wrapper-content .blinking-dot{background:#f5c400!important}
 .wrapper-content .blinking-green,.wrapper-content [style*="color:green"],.wrapper-content [style*="color: green"],.wrapper-content [style*="color:#0f0"]{color:#f5c400!important}
 .notification-bell .notification-count{background:#f5c400!important;color:#111!important}
-.vt-preview-note{margin:10px 14px;padding:10px 13px;border:1px solid rgba(245,196,0,.3);border-radius:9px;background:rgba(245,196,0,.08);color:#f5d95d;font-size:12px}
 .vt-payment-qr-placeholder{display:grid;place-items:center;width:200px;min-height:160px;margin:12px auto;padding:16px;border:1px dashed rgba(245,196,0,.4);border-radius:12px;background:rgba(245,196,0,.06);color:#f5d95d;text-align:center;font-size:12px}

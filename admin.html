@@ -1,1 +1,79 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="assets/vertix-trade-mark.png" type="image/png"><title>Command center | Vertix Trade</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="css/superphase.css"></head><body class="admin-body"><div class="admin-shell"><aside class="admin-side"><a class="brand" href="index.html"><span class="brand-mark"><img src="assets/vertix-trade-mark.png" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a><nav class="admin-menu"><a class="active" href="admin.html"><span>◈</span> Command center</a><a href="#signals-admin"><span>↗</span> Public signals</a><a href="#users-admin"><span>◎</span> Members</a><a href="#content-admin"><span>◫</span> Content</a><a href="index.html"><span>↩</span> View public site</a></nav></aside><main class="admin-main"><header class="admin-topbar"><div><div class="eyebrow"><span class="pulse-dot"></span> Workspace admin · control plane</div><h1>Command center</h1></div><div class="admin-user"><span>Vertix Trade administrator</span><i class="avatar-admin">SA</i></div></header><section class="admin-grid"><article class="admin-stat glass-panel"><small>Members</small><strong id="member-count">—</strong></article><article class="admin-stat glass-panel"><small>Active signals</small><strong id="signal-count">—</strong></article><article class="admin-stat glass-panel"><small>Signal reach</small><strong>42.8k</strong></article><article class="admin-stat glass-panel"><small>System status</small><strong style="color:#8be4b2">Online</strong></article></section><section class="admin-content-grid"><article class="admin-panel glass-panel" id="signals-admin"><div class="panel-title"><h2>Public signals</h2><button class="button button-primary button-small" id="add-signal">+ Add signal</button></div><div class="admin-list" id="signals-list"><div class="empty-state">Loading signals…</div></div></article><aside class="admin-panel glass-panel" id="content-admin"><div class="panel-title"><h2>Recent activity</h2></div><div class="admin-activity"><div class="activity-item"><i></i><div>Signal published: BTC / USD<small>18 minutes ago · system</small></div></div><div class="activity-item"><i></i><div>New member joined: Avery Morgan<small>42 minutes ago · auth</small></div></div><div class="activity-item"><i></i><div>Market brief updated: “Risk in focus”<small>1 hour ago · admin</small></div></div><div class="activity-item"><i></i><div>Role changed: Jordan Lee → Analyst<small>3 hours ago · admin</small></div></div></div></aside><article class="admin-panel glass-panel" id="users-admin"><div class="panel-title"><h2>Members</h2><button class="button button-quiet button-small" id="refresh-users">Refresh</button></div><div class="admin-list" id="users-list"><div class="empty-state">Loading members…</div></div></article></section></main></div><script type="module" src="js/admin.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Vertix Trade administration.">
+  <link rel="icon" href="assets/vertix-trade-mark.png" type="image/png">
+  <title>Admin | Vertix Trade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/superphase.css">
+</head>
+<body class="admin-body">
+  <div class="admin-shell">
+    <aside class="admin-side">
+      <a class="brand" href="index.html"><span class="brand-mark"><img src="assets/vertix-trade-mark.png" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a>
+      <nav class="admin-menu" aria-label="Administration">
+        <a class="active" href="admin.html"><span>◈</span> Administration</a>
+        <a href="#signals-admin"><span>↗</span> Signals</a>
+        <a href="#assets-admin"><span>◎</span> Market assets</a>
+        <a href="#users-admin"><span>◉</span> Members</a>
+        <a href="#requests-admin"><span>⇄</span> Requests</a>
+        <a href="index.html"><span>↩</span> Public site</a>
+        <a href="#" data-logout><span>↩</span> Sign out</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div><div class="eyebrow"><span class="pulse-dot"></span> Vertix Trade</div><h1>Administration</h1></div>
+        <div class="admin-user"><span id="admin-email">Administrator</span><i class="avatar-admin" aria-hidden="true">V</i></div>
+      </header>
+      <p class="form-status admin-status" id="admin-status" aria-live="polite"></p>
+      <section class="admin-grid" aria-label="Live account totals">
+        <article class="admin-stat glass-panel"><small>Members</small><strong id="member-count">—</strong></article>
+        <article class="admin-stat glass-panel"><small>Signals</small><strong id="signal-count">—</strong></article>
+        <article class="admin-stat glass-panel"><small>Market assets</small><strong id="asset-count">—</strong></article>
+        <article class="admin-stat glass-panel"><small>Submitted requests</small><strong id="request-count">—</strong></article>
+      </section>
+      <section class="admin-content-grid admin-content-grid-wide">
+        <article class="admin-panel glass-panel" id="signals-admin">
+          <div class="panel-title"><h2>Signals</h2></div>
+          <form class="admin-entry-form" id="signal-form" method="post">
+            <label>Asset<input name="asset" required maxlength="80"></label>
+            <label>Pair<input name="pair" required maxlength="40"></label>
+            <label>Direction<select name="direction" required><option value="Long">Long</option><option value="Short">Short</option><option value="Watch">Watch</option></select></label>
+            <label>Timeframe<input name="timeframe" required maxlength="24" placeholder="e.g. 4H"></label>
+            <label>Confidence (%)<input name="confidence" type="number" min="0" max="100" required></label>
+            <label>Status<select name="status" required><option value="Active">Active</option><option value="Review">Review</option><option value="Closed">Closed</option></select></label>
+            <button class="button button-primary button-small" type="submit">Publish signal</button>
+          </form>
+          <div class="admin-list" id="signals-list"><div class="empty-state">Loading signals…</div></div>
+        </article>
+        <article class="admin-panel glass-panel" id="assets-admin">
+          <div class="panel-title"><h2>Market assets</h2></div>
+          <form class="admin-entry-form" id="asset-form" method="post">
+            <label>Display name<input name="displayName" required maxlength="80"></label>
+            <label>Symbol / pair<input name="symbol" required maxlength="40"></label>
+            <label>Asset type<input name="assetType" required maxlength="40" placeholder="Crypto, FX, equities…"></label>
+            <label>TradingView symbol<input name="tradingViewSymbol" maxlength="80" placeholder="Provider symbol"></label>
+            <button class="button button-primary button-small" type="submit">Add market asset</button>
+          </form>
+          <div class="admin-list" id="assets-list"><div class="empty-state">Loading market assets…</div></div>
+        </article>
+        <article class="admin-panel glass-panel" id="users-admin">
+          <div class="panel-title"><h2>Members</h2><button class="button button-quiet button-small" id="refresh-data" type="button">Refresh</button></div>
+          <div class="admin-list" id="users-list"><div class="empty-state">Loading members…</div></div>
+        </article>
+        <article class="admin-panel glass-panel" id="requests-admin">
+          <div class="panel-title"><h2>Member requests</h2></div>
+          <div class="admin-list" id="requests-list"><div class="empty-state">Loading requests…</div></div>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function verified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return verified()
+        && request.auth.token.admin == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.email;
+    }
+
+    function owns(uid) {
+      return verified() && request.auth.uid == uid;
+    }
+
+    function validCurrency(value) {
+      return value is string && value.matches('^[A-Z]{3}$');
+    }
+
+    match /users/{uid} {
+      allow get: if owns(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasAll([
+          'uid', 'email', 'legalName', 'dateOfBirth', 'phoneNumber',
+          'countryOfResidence', 'addressLine1', 'city', 'postalCode',
+          'preferredCurrency', 'employmentStatus', 'sourceOfFunds',
+          'tradingExperience', 'accountPurpose', 'accountStatus', 'kycStatus',
+          'referralCode', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'legalName', 'dateOfBirth', 'phoneNumber',
+          'countryOfResidence', 'nationality', 'addressLine1', 'addressLine2',
+          'city', 'region', 'postalCode', 'preferredCurrency', 'employmentStatus',
+          'sourceOfFunds', 'tradingExperience', 'accountPurpose', 'accountStatus',
+          'kycStatus', 'referralCode', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.legalName is string
+        && request.resource.data.legalName.size() >= 2
+        && request.resource.data.legalName.size() <= 120
+        && request.resource.data.dateOfBirth is string
+        && request.resource.data.phoneNumber is string
+        && request.resource.data.countryOfResidence is string
+        && request.resource.data.addressLine1 is string
+        && request.resource.data.city is string
+        && request.resource.data.postalCode is string
+        && validCurrency(request.resource.data.preferredCurrency)
+        && request.resource.data.employmentStatus in ['employed', 'self_employed', 'student', 'retired', 'unemployed', 'other']
+        && request.resource.data.sourceOfFunds in ['employment_income', 'business_income', 'savings', 'investment_income', 'pension', 'other']
+        && request.resource.data.tradingExperience in ['none', 'under_1_year', '1_to_3_years', '3_to_5_years', 'over_5_years']
+        && request.resource.data.accountPurpose in ['active_trading', 'investing', 'hedging', 'research', 'other']
+        && request.resource.data.accountStatus == 'pending_verification'
+        && request.resource.data.kycStatus == 'not_started';
+      allow update: if isAdmin() || (owns(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'preferredCurrency', 'phoneNumber', 'addressLine1', 'addressLine2',
+          'city', 'region', 'postalCode', 'updatedAt'
+        ])
+        && (!('preferredCurrency' in request.resource.data) || validCurrency(request.resource.data.preferredCurrency)));
+      allow delete: if false;
+
+      match /requests/{requestId} {
+        allow read: if owns(uid) || isAdmin();
+        allow create: if owns(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.status == 'submitted'
+          && request.resource.data.type in ['trade', 'deposit', 'withdrawal', 'loan', 'plan', 'support']
+          && request.resource.data.keys().hasOnly([
+            'uid', 'type', 'status', 'amount', 'currency', 'symbol', 'side',
+            'leverage', 'duration', 'takeProfit', 'stopLoss', 'method',
+            'destination', 'purpose', 'message', 'subject', 'planId', 'createdAt'
+          ])
+          && (!('amount' in request.resource.data) || (request.resource.data.amount is number && request.resource.data.amount >= 0))
+          && (request.resource.data.type in ['support', 'plan'] || (request.resource.data.amount is number && request.resource.data.amount > 0))
+          && (!('currency' in request.resource.data) || validCurrency(request.resource.data.currency))
+          && (request.resource.data.type != 'trade' || (
+            request.resource.data.symbol is string
+            && request.resource.data.side in ['buy', 'sell']
+            && request.resource.data.leverage is number
+            && request.resource.data.leverage >= 1
+            && request.resource.data.leverage <= 10
+          ));
+        allow update, delete: if isAdmin();
+      }
+
+      match /transactions/{transactionId} {
+        allow read: if owns(uid) || isAdmin();
+        allow write: if isAdmin();
+      }
+
+      match /trades/{tradeId} {
+        allow read: if owns(uid) || isAdmin();
+        allow write: if isAdmin();
+      }
+
+      match /settings/{settingId} {
+        allow read: if owns(uid) || isAdmin();
+        allow create, update: if owns(uid)
+          && request.resource.data.keys().hasOnly(['reduceMotion', 'updatedAt']);
+        allow delete: if false;
+      }
+
+      match /{subcollection}/{documentId} {
+        allow read: if owns(uid) || isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /admins/{uid} {
+      allow get, list: if isAdmin();
+      allow write: if false;
+    }
+
+    match /signals/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /marketAssets/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /copyStrategies/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /plans/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /digitalAssets/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /news/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /marketCalendar/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /auditLog/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

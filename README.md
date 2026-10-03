@@ -1,23 +1,29 @@
 # Vertix Trade
 
-A static, responsive trading-workspace front end using a consistent yellow-and-black glassmorphism system.
+Vertix Trade is a responsive member and administrator workspace using the established black-and-yellow glassmorphism design.
 
 ## Pages
-- `index.html` — public landing page
-- `login.html` / `register.html` — Firebase-ready authentication previews
-- `admin.html` — admin command center with in-memory CRUD preview
-- `user-dashboard.html` — member overview
-- `dashboard/*.html` — distinct member pages for deposits, withdrawals, trading, copy strategies, plans, digital gallery, signals, financing enquiry, histories, market notes, profile, settings, referrals, technical analysis, charts, and calendar
+
+- `index.html` — public site
+- `login.html`, `register.html`, `verify-email.html` — Firebase Authentication flows
+- `user-dashboard.html` and `dashboard/*.html` — authenticated member workspace
+- `admin.html` — custom-claim-protected administration
 - `dashboard.html` — compatibility redirect to the member overview
 
-## Preview behavior
-The member pages share `js/member-dashboard.js` and `css/member-dashboard.css`. Sidebar destinations are actual static HTML documents. Trade controls validate locally and show an order preview only; no trade, payment, credit application, purchase, or account change is transmitted. Sample balances, market readings, histories, and strategies are illustrative.
+## Data model
 
-## Firebase / Firestore handoff
-1. Open `js/firebase.js`.
-2. Replace the `YOUR_FIREBASE_*` values with the owner's Firebase web app configuration.
-3. Enable Email/Password under Firebase Authentication.
-4. Add Firestore collections named `profiles`, `signals`, and `users` with deployment-appropriate rules.
-5. Deploy the static folder with the hosting provider of choice.
+- `users/{uid}` stores a member's registration profile and preferred currency.
+- `admins/{uid}` is a distinct administrator collection; administrator access additionally requires the Firebase Auth `admin` custom claim.
+- `users/{uid}/requests`, `users/{uid}/trades`, and `users/{uid}/transactions` hold account-specific requests and records.
+- `signals`, `marketAssets`, `copyStrategies`, `plans`, `digitalAssets`, `news`, and `marketCalendar` hold published platform data.
+- Firestore is the application's account-data source. The client has no mock or local-storage fallback.
 
-The site is a static front-end prototype; connect approved server-side services before enabling live financial actions. The generated Vertix Trade mark is in `assets/vertix-trade-mark.png`; the original assets remain for backward compatibility.
+## Firebase and Vercel
+
+Set the web-app environment variables listed in `.env.example` in Vercel. `/api/firebase-config` serves only Firebase's public web configuration. Configure Firebase Email/Password, email verification, authorized domains, Firestore, and publish `firestore.rules` before enabling account access. Cloud Firestore must be enabled for the project before the requested admin identity can be provisioned. Follow [VERCEL_ENV.md](VERCEL_ENV.md).
+
+The uploaded Admin SDK service-account key is not part of the repository or required by the browser application. Never expose it to client code.
+
+## Operational boundary
+
+Member request forms persist authenticated submissions in Firestore with a submitted status. Funds movement and order execution require an authorized payment or brokerage execution service and are not represented as settled transactions by this client. Regulatory onboarding fields, disclosures, and consent language must be finalized for the jurisdictions Vertix Trade serves.

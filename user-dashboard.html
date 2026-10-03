@@ -361,7 +361,7 @@
                 <ul class="navbar-nav  justify-content-end">
                     <li class="nav-item">
                         <button class="btn-link btn userprofile" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="userpic">
-                <img src="./assets/vertix-user-avatar.svg" alt="user pic"></span> <span class="text">Avery Morgan</span></button>
+                <img src="./assets/vertix-user-avatar.svg" alt="user pic"></span> <span class="text" data-member-name>Account holder</span></button>
                         <div class="dropdown-menu">
                             <a class="dropdown-item" href="./dashboard/account-settings.html"><i class="fa fa-user"></i> Profile</a>
                             <a class="dropdown-item" href="./dashboard/deposits.html"><i class="fa fa-dollar-sign"></i> Deposit</a>
@@ -409,64 +409,14 @@
                 <button class="media btn btn-link" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           <br>
         <span class="message_userpic"><img class="d-flex" src="./assets/vertix-user-avatar.svg" alt="Generic user image"></span>
-          <span class="media-body"> <span class="mt-0 mb-1">Avery Morgan</span>
+          <span class="media-body"> <span class="mt-0 mb-1" data-member-name>Account holder</span>
            <small class="blinking-yellow">
-    KYC: Not Verified
+    KYC: <span data-kyc-status>not_started</span>
 </small> </span> </button>
             </div>
         </div>
         <br>
-        <ul class="nav flex-column in" id="side-menu">
-            <li class=" nav-item"><a href="./user-dashboard.html" class="nav-link "><i class="fa fa-tachometer"></i> Account</a>
-            </li>
-            <li class=" nav-item"><a href="./dashboard/deposits.html" class="nav-link "><i class="fa fa-dollar-sign"></i> Deposit</a>
-            </li>
-            <li class=" nav-item"><a href="./dashboard/withdrawals.html" class="nav-link "><i class="fas fa-wallet"></i> Withdraw</a>
-            </li>
-
-            <li class=" nav-item"><a href="./dashboard/trade.html" class="nav-link "><i class="fa fa-chevron-right"></i>Trade</a>
-            </li>
-
-            <li class=" nav-item"><a href="./dashboard/copy-trading.html" class="nav-link "><i class="fa fa-copy"></i>Copy Experts</a></li>
-            <li class=" nav-item"><a href="./dashboard/buy-plan.html" class="nav-link "><i class="fas fa-briefcase"></i> Subscribe</a>
-            </li>
-            <li class=" nav-item"><a href="./dashboard/digitals-gallery.html" class="nav-link "><i class="fas fa-gem"></i> NFTS</a></li>
-            <li class=" nav-item"><a href="./dashboard/signals.html" class="nav-link "><i class="fa fa-signal"></i> Signal</a></li>
-            <li class=" nav-item"><a href="./dashboard/loans/apply.html" class="nav-link "><i class="fas fa-hand-holding-usd"></i> Loan</a></li>
-            <li class=" nav-item"><a href="./dashboard/tradinghistory.html" class="nav-link "><i class="fas fa-history"></i> History</a>
-            </li>
-            <li class=" nav-item"><a href="./dashboard/accounthistory.html" class="nav-link "><i class="fas fa-money-bill-transfer"></i> Transactions</a>
-            </li>
-
-
-
-
-            </li>
-            <li class=" nav-item"><a href="./dashboard/news.html" class="nav-link "><i class="fa fa-newspaper"></i>News </a>
-            </li>
-            <li class=" nav-item"><a href="./dashboard/account-settings.html" class="nav-link "><i class="fa fa-cogs"></i>Account Settings </a>
-            </li>
-
-
-            <li class=" nav-item"><a href="./dashboard/referuser.html" class="nav-link  "><i class="fas fa-retweet fa"></i>Referrals </a>
-            </li>
-            <li class=" nav-item"><a href="./index.html" class="nav-link "><i class="fa fa-sign-out"></i> Logout
-
-
-      </a>
-            </li>
-            <li class="title-nav">
-                <li class="nav-item "> <a href="javascript:void(0)" class="menudropdown nav-link">Live Analysis<i class="fa fa-angle-down "></i></a>
-                    <ul class="nav flex-column nav-second-level ">
-                        <li class="nav-item"><a class="nav-link" href="./dashboard/technical.html"><i class="fa fa-arrows-alt"></i> Technical Analysis</a></li>
-                        <li class="nav-item"><a class="nav-link" href="./dashboard/chart.html"><i class="fa fa-chart-area"></i> Live Market Chart</a>
-                            <li class="nav-item"><a class="nav-link" href="./dashboard/calendar.html"><i class="fa fa-calendar-alt"></i> Market Calendar</a>
-                            </li>
-                    </ul>
-                    <!-- /.nav-second-level -->
-                    </li>
-                </li>
-        </ul>
+        <ul class="nav flex-column in" id="side-menu" data-dashboard-nav aria-label="Member dashboard"></ul>
 
 
 
@@ -494,7 +444,7 @@
             <div class="d-flex align-items-center p-1 bg-dark text-white rounded shadow">
                 <i class="fas fa-user-circle fa-2x me-3"></i>
                 <!-- User Icon -->
-                <p class="mb-0 fs-5"><b>Username:</b> Avery Morgan</p>
+                <p class="mb-0 fs-5"><b>Account holder:</b> <span data-member-name>Account holder</span></p>
             </div>
             <div>
                 <div>
@@ -506,39 +456,7 @@
 
                 <!-- TradingView Widget BEGIN -->
                 <!-- TradingView Widget BEGIN -->
-                <div class="tradingview-widget-container">
-                    <div class="tradingview-widget-container__widget"></div>
-                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-                        {
-                            "symbols": [{
-                                    "proName": "FOREXCOM:SPXUSD",
-                                    "title": "S&P 500"
-                                },
-                                {
-                                    "proName": "FOREXCOM:NSXUSD",
-                                    "title": "Nasdaq 100"
-                                },
-                                {
-                                    "proName": "FX_IDC:EURUSD",
-                                    "title": "EUR/USD"
-                                },
-                                {
-                                    "proName": "BITSTAMP:BTCUSD",
-                                    "title": "BTC/USD"
-                                },
-                                {
-                                    "proName": "BITSTAMP:ETHUSD",
-                                    "title": "ETH/USD"
-                                }
-                            ],
-                            "showSymbolLogo": true,
-                            "colorTheme": "dark",
-                            "isTransparent": false,
-                            "displayMode": "relative",
-                            "locale": "en"
-                        }
-                    </script>
-                </div>
+                <div class="tradingview-widget-container" id="market-ticker" aria-live="polite">Loading market data…</div>
                 <!-- TradingView Widget END -->
 
 
@@ -549,15 +467,13 @@
                         <div class="activity-block  success">
                             <div class="media">
                                 <div class="media-body">
-                                    <h5 class="font-weight-bold"><span class="">د.إ0.00</span></h5>
-                                    <p>Total Balance</p>
+                                    <h5 class="font-weight-bold"><span data-dashboard-field="balance">—</span></h5>
+                                    <p>Total Balance · <span data-account-currency>—</span></p>
                                 </div>
                                 <!--<i class="fa fa-chart-bar"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress ">
-                                    <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 60%;"><span class="trackerball"></span></div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-chart-bar"></i>-->
                         </div>
@@ -566,15 +482,13 @@
                         <div class="activity-block  success">
                             <div class="media">
                                 <div class="media-body">
-                                    <h5 class="font-weight-bold"><span class="">د.إ0.00</span></h5>
+                                    <h5 class="font-weight-bold"><span data-dashboard-field="profit">—</span></h5>
                                     <p>Profit</p>
                                 </div>
                                 <!--<i class="fa fa-dollar-sign"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress ">
-                                    <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 86%;"><span class="trackerball"></span></div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-dollar-sign"></i>-->
                         </div>
@@ -583,15 +497,13 @@
                         <div class="activity-block  success">
                             <div class="media">
                                 <div class="media-body">
-                                    <h5 class="font-weight-bold"><span class="">د.إ0.00</span></h5>
+                                    <h5 class="font-weight-bold"><span data-dashboard-field="bonus">—</span></h5>
                                     <p>Total Bonus</p>
                                 </div>
                                 <!--<i class="fa fa-users"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress ">
-                                    <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 45%;"><span class="trackerball"></span></div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-users"></i>-->
                         </div>
@@ -600,18 +512,16 @@
                         <div class="activity-block  success">
                             <div class="media">
                                 <div class="media-body">
-                                    <h6 class="font-weight-bold"><span class=""><i style="color:#0f0;font-size:12px" class="fa fa-check-circle  blink_me">   <small>Auto Trading Enabled</small> </span> </button>
+                                    <h6 class="font-weight-bold"><span class=""><i style="color:#0f0;font-size:12px" class="fa fa-check-circle  blink_me">   <small><span data-account-status>pending verification</span></small> </span> </button>
                                         </i>
                                         </span>
                                     </h6>
-                                    <p>Auto Trading Status</p>
+                                    <p>Account Status</p>
                                 </div>
                                 <!--<i class="fa fa-address-card"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress ">
-                                    <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 80%;"><span class="trackerball"></span></div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-address-card"></i>-->
                         </div>
@@ -625,18 +535,14 @@
                             <div class="media">
                                 <div class="media-body">
                                     <h5 class="font-weight-bold">
-                                        <span class="">د.إ0</span>
+                                        <span data-dashboard-field="deposits">—</span>
                                     </h5>
                                     <p>Total Deposits</p>
                                 </div>
                                 <!--<i class="fa fa-chart-line"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: 100%;">
-                                        <span class="trackerball"></span>
-                                    </div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-chart-line"></i>-->
                         </div>
@@ -648,18 +554,14 @@
                             <div class="media">
                                 <div class="media-body">
                                     <h5 class="font-weight-bold">
-                                        <span class="">0</span>
+                                        <span data-dashboard-field="openTrades">—</span>
                                     </h5>
                                     <p>Open Trades</p>
                                 </div>
                                 <!--<i class="fa fa-folder-open"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: 100%;">
-                                        <span class="trackerball"></span>
-                                    </div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-folder-open"></i>-->
                         </div>
@@ -671,18 +573,14 @@
                             <div class="media">
                                 <div class="media-body">
                                     <h5 class="font-weight-bold">
-                                        <span class="">0</span>
+                                        <span data-dashboard-field="closedTrades">—</span>
                                     </h5>
                                     <p>Closed Trades</p>
                                 </div>
                                 <!--<i class="fa fa-folder"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: 100%;">
-                                        <span class="trackerball"></span>
-                                    </div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-folder"></i>-->
                         </div>
@@ -698,18 +596,14 @@
                             <div class="media">
                                 <div class="media-body">
                                     <h5 class="font-weight-bold">
-                                        <span class="">0</span>
+                                        <span data-dashboard-field="winLossRatio">—</span>
                                     </h5>
                                     <p>Win/Loss Ratio</p>
                                 </div>
                                 <!--<i class="fa fa-trophy"></i>-->
                             </div>
                             <div class="row">
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: 100%;">
-                                        <span class="trackerball"></span>
-                                    </div>
-                                </div>
+
                             </div>
                             <!--<i style="margin-top:-12px;" class="bg-icon text-center fa fa-trophy"></i>-->
                         </div>
@@ -762,9 +656,9 @@
                         <div class="card full-screen-container">
                             <div class="card-header align-items-start justify-content-between flex" style="">
                                 <h5 class="card-title pull-left" style="color:white; display: flex; align-items: center; gap: 5px;">
-                                    <b style="color: green;">Live Trading</b>
+                                    <b style="color: #f5c400;">Order request</b>
                                     <span class="blinking-dot"></span>
-                                    <span style="float:right;font-size:15px">Balance : <span style="color:green">د.إ0.00</span></span>
+                                    <span style="float:right;font-size:15px">Balance : <span data-account-balance>—</span></span>
                                 </h5>
 
                                 <ul class="nav nav-pills card-header-pills pull-right">
@@ -773,92 +667,21 @@
                                         <button class="btn btn-sm btn-link btn-round fullscreen-btn"><i class="fa fa-arrows-alt"></i></button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#demo"><i class="fa fa-chevron-down"></i></button>
+                                        <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#market-chart-panel"><i class="fa fa-chevron-down"></i></button>
                                     </li>
                                 </ul>
                             </div>
-                            <form id="tradeForm" method="POST" class="p-3 text-white rounded" action="#" data-preview-form onsubmit="return false;">
+                            <form id="tradeForm" method="post" class="p-3 text-white rounded" action="#">
 
                                 <div class="form-group">
                                     <label>Asset Type</label>
-                                    <select name="asset_type" id="asset_type" class="form-control" required>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="forex">Forex</option>
-                                    <option value="stock">Stock</option>
-                                </select>
+                                    <select name="asset_type" id="asset_type" class="form-control" required><option value="">Select market type</option></select>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Asset Name</label>
 
-                                    <div id="trade_pair1_container" style='text-align: left;'>
-                                        <select name="asset_name" class="form-control" style='text-align: left;'>
-            <option value="USDT/BTC" data-icon='../includes/icons/bitcoin.png'>USDT/BTC</option>
-            <option value="USDT/ETH" data-icon='../includes/icons/eth.png'>USDT/ETH</option>
-            <option value="USDT/TRX" data-icon='../includes/icons/tron.png'>USDT/TRX</option>
-            <option value="USDT/SOL" data-icon='../includes/icons/Solana_logo.png'>USDT/SOL</option>
-            <option value="USDT/LTC" data-icon='../includes/icons/lite.png'>USDT/LTC</option>
-            <option value="USDT/BNB" data-icon='../includes/icons/bnb.png'>USDT/BNB</option>
-            <option value="USDT/LINK" data-icon='../includes/icons/link.png'>USDT/LINK</option>
-            <option value="USDT/FTT" data-icon='../includes/icons/ftt.png'>USDT/FTT</option>
-            <option value="USDT/SHIB" data-icon='../includes/icons/shib.png'>USDT/SHIB</option>
-            <option value="USDT/ETC" data-icon='../includes/icons/etc.png'>USDT/ETC</option>
-            <option value="USDT/TFUEL" data-icon='../includes/icons/tfuel.png'>USDT/TFUEL</option>
-            <option value="USDT/ADA" data-icon='../includes/icons/ada.png'>USDT/ADA</option>
-            <option value="USDT/VET" data-icon='../includes/icons/vet.png'>USDT/VET</option>
-        </select>
-                                    </div>
-
-
-                                    <div id="trade_pair2_container" style='text-align: left; display: none'>
-                                        <select name="asset_name" id="trade_pair_two" class="form-control">
-            <option value="FACEBOOK INC" data-icon='../includes/icons/facebook.png' >FACEBOOK INC</option>
-            <option value="BOEING CO" data-icon='../includes/icons/boeing.png' >BOEING CO</option>
-            <option value="APPLE INC" data-icon='../includes/icons/apple.png' >APPLE INC</option>
-            <option value="AMAZON COM INC" data-icon='../includes/icons/amazon.png' >AMAZON COM INC</option>
-            <option value="MICROSOFT CORP" data-icon='../includes/icons/microsoft.png' >MICROSOFT CORP</option>
-            <option value="NETFLIX INC" data-icon='../includes/icons/netflix.png' >NETFLIX INC</option>
-            <option value="MICRON TECHNOLOGY INC" data-icon='../includes/icons/mircon.png' >MICRON TECHNO...</option>
-            <option value="NVIDIA CORP" data-icon='../includes/icons/nvidia.png' >NVIDIA CORP</option>
-            <option value="CANOPY GROWTH INCORPORATION" data-icon='../includes/icons/canopy.png' >CANOPY GROW...</option>
-            <option value="TESLA INC" data-icon='../includes/icons/tesla.png' >TESLA INC</option>
-            <option value="TWITTER INC" data-icon='../includes/icons/twitter.png' >TWITTER INC</option>
-            <option value="SBERBANK RUSSIA" data-icon='../includes/icons/sberbank.png' >SBERBANK RUS...</option>
-            <option value="CRONOS GROUP INC" data-icon='../includes/icons/cronos.png' >CRONOS GROUP INC</option>
-            <option value="PENNYMAC FINCANCIAL SERVICES INC" data-icon='../includes/icons/pennymac.png' >PENNYMAC FINCA...</option>
-            <option value="PAN AMERICAN SILVER CORP" data-icon='../includes/icons/pan.png' >PAN AME...</option>
-            <option value="BANK OF AMERICAN CORPORATION" data-icon='../includes/icons/bank.png' >BANK OF AMERI...</option>
-            <option value="INTEL CORP" data-icon='../includes/icons/intel.png' >INTEL CORP</option>
-            <option value="RELIANCE INDS" data-icon='../includes/icons/reliance.png' >RELIANCE INDS</option>
-            <option value="ELECTRONIC ARTS INC" data-icon='../includes/icons/electronic.png' >ELECTRONIC AR...</option>
-            <option value="SAMSUNG LIFE" data-icon='../includes/icons/samsung.png' >SAMSUNG LIFE</option>
-            <option value="SHOPIFY INC" data-icon='../includes/icons/shopify.png' >SHOPIFY INC</option>
-            <option value="PAYPAL HONDINGS INC" data-icon='../includes/icons/paypal.png' >PAYPAL HONDINGS INC</option>
-        </select>
-                                    </div>
-
-                                    <div id="trade_pair3_container" style='text-align: left;  display: none '>
-                                        <select name="asset_name" id="trade_pair_three" class="form-control">
-            <option value="GBPUSD" data-icon='../includes/icons/gbpusd.png'>GBPUSD, Pound vs US Dollar</option>
-            <option value="EURAUD" data-icon='../includes/icons/euraud.png'>EURAUD, Euro vs Australian Dollar</option>
-            <option value="EURCHF" data-icon='../includes/icons/eurchf.png'>EURCHF, Euro vs Swiss Franc</option>
-            <option value="EURGBP" data-icon='../includes/icons/eurgbp.png'>EURGBP, Euro vs Great Britain</option>
-            <option value="GBPCAD" data-icon='../includes/icons/gbpcad.png'>GBPCAD, Great Britain Pound vs Canadian Dollar</option>
-            <option value="NZDUSD" data-icon='../includes/icons/nzdusd.png'>NZDUSD, New Zealand vs US Dollar</option>
-            <option value="EURNZD" data-icon='../includes/icons/eurusd.png'>EURNZD, Euro vs New Zealand</option>
-            <option value="CADJPYm" data-icon='../includes/icons/cadjpym.png'>CADJPYm, Canadian Dollar vs Japanise Yen AUDJPYm, Australian Dollar vs Japanise Yen</option>
-            <option value="USDCHF" data-icon='../includes/icons/eurchf.png'>USDCHF, US Dollar vs Swiss Franc</option>
-            <option value="GBPAUD" data-icon='../includes/icons/gbpaud.png'>GBPAUD, Great Britain Pound vs Australian Dollar</option>
-            <option value="USDTRY" data-icon='../includes/icons/usdtry.png'>USDTRY, US Dollar vs Turkish New Lira</option>
-            <option value="USD vs THB" data-icon='../includes/icons/usdthb.png'>USD vs THB</option>
-            <option value="AUD vS USD" data-icon='../includes/icons/gbpaud.png'>AUD vS USD</option>
-            <option value="CAD vs JPY" data-icon='../includes/icons/cadjpym.png'>CAD vs JPY</option>
-            <option value="EURUSD" data-icon='../includes/icons/eurusd.png'>EURUSD, Euro vs US Dollar</option>
-            <option value="USDRUB" data-icon='../includes/icons/usdrub.png'>USDRUB, US Dollar vs Russian Ruble</option>
-            <option value="XAUUSD" data-icon='../includes/icons/xauusd.png'>XAUUSD, Gold vs US Dollar</option>
-            <option value="NZDJPY" data-icon='../includes/icons/cadjpym.png'> NZDJPY, New Zealand Dollar vs Japanise Yen</option>
-        </select>
-                                    </div>
+                                    <div id="trade_pair1_container" style="text-align:left"><select name="asset_name" id="market-select" class="form-control" required><option value="">Select market</option></select></div>
 
 
                                 </div>
@@ -869,42 +692,12 @@
 
                                     <label class="block font-semibold text-sm mb-2">Leverage:</label>
 
-                                    <div class="flex items-center gap-1 mb-1">
-                                        <input type="text" name="leverage" id="leverageValue" class=" text-black text-center px-3 py-2 rounded w-20" value="5x" readonly>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(2)">2x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(3)">3x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(4)">4x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(5)">5x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(10)">10x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(25)">25x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(30)">30x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(40)">40x</button>
-
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(50)">50x</button>
-                                        <button type="button" class="px-3 py-1 bg-blue-600 rounded" onclick="setLeverage(60)">60x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(70)">70x</button>
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(80)">80x</button>
-
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(90)">90x</button>
-
-                                        <button type="button" class="px-3 py-1 bg-gray-700 rounded" onclick="setLeverage(100)">100x</button>
-                                    </div>
-
-                                    <input type="range" id="leverageSlider" min="1" max="100" value="5" class="form-control" oninput="updateLeverage()">
+                                    <div class="flex items-center gap-1 mb-1"><input type="number" name="leverage" id="leverageValue" min="1" max="10" step="1" value="1" class="form-control" aria-label="Leverage multiplier"></div>
 
 
-                                    <script>
-                                        function updateLeverage() {
-                                            const slider = document.getElementById('leverageSlider');
-                                            const leverageValue = document.getElementById('leverageValue');
-                                            leverageValue.value = slider.value + 'x';
-                                        }
 
-                                        function setLeverage(value) {
-                                            document.getElementById('leverageSlider').value = value;
-                                            document.getElementById('leverageValue').value = value + 'x';
-                                        }
-                                    </script>
+
+
 
                                     <!-- <label>Leverage</label>
                                 <input type="number" name="leverage" class="form-control" min="1" max="100" required> -->
@@ -917,7 +710,7 @@
                                 <div class="form-group">
                                     <label>Trade Duration (in minutes)</label>
 
-                                    <select name="duration" type="number" class="form-control" id='time_select' onchange='time_value(this)'>
+                                    <select name="duration" type="number" class="form-control" id='time_select'>
                                 <option value="1">1 Minute</option>
                         <option value="5">5 Minutes</option>
                         <option value="15">15 Minutes</option>
@@ -934,18 +727,18 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Amount</label>
+                                    <label>Order size (<span data-account-currency>—</span>)</label>
                                     <input type="number" name="amount" placeholder='Enter trade amount ' class="form-control" step="0.01" required>
                                 </div>
 
                                 <div class="form-group" style="display: flex; gap: 10px; align-items: center;">
                                     <div>
                                         <label for="take_profit">Take Profit :</label>
-                                        <input type="number" step="any" name="take_profit" class='form-control' value="0.00">
+                                        <input type="number" step="any" name="take_profit" class='form-control' >
                                     </div>
                                     <div>
                                         <label for="stop_loss">Stop Loss :</label>
-                                        <input type="number" step="any" name="stop_loss" class='form-control' value="0.00">
+                                        <input type="number" step="any" name="stop_loss" class='form-control' >
                                     </div>
                                 </div>
                                 <div class="form-group text-center">
@@ -953,14 +746,14 @@
                                     <button type="button" class="bybit-sell-btn confirm-trade" data-action="sell" style="width: 100%; max-width: 200px;">Sell</button>
                                 </div>
                                 <input type="hidden" name="action" id="tradeAction">
-                            <p class="vt-preview-note" id="trade-preview-note">Preview only — Buy and Sell do not submit live orders.</p>
+                            <p class="vt-request-status" id="trade-request-status" aria-live="polite"></p>
                             </form>
                         </div>
                     </div>
                     <div class="col-md-10 col-lg-10 col-xl-10">
                         <div class="card full-screen-container">
                             <div class="card-header align-items-start justify-content-between flex" style="">
-                                <h5 class="card-title  pull-left" style="color:white"><b>Live Trading Chart</b></h5>
+                                <h5 class="card-title  pull-left" style="color:white"><b>Market Chart</b></h5>
                                 <ul class="nav nav-pills card-header-pills pull-right">
                                     <!-- <li class="nav-item">
             <button type="" class="btn btn-sm btn-outline-primary btn-round" id="livechart"><i class="fa fa-print"></i> <span class="">Get Pdf</span></button>
@@ -969,39 +762,16 @@
                                         <button class="btn btn-sm btn-link btn-round fullscreen-btn"><i class="fa fa-arrows-alt"></i></button>
                                     </li>
                                     <li class="nav-item">
-                                        <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#demo"><i class="fa fa-chevron-down"></i></button>
+                                        <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#market-chart-panel"><i class="fa fa-chevron-down"></i></button>
                                     </li>
                                 </ul>
                             </div>
                             <div id="tablelivechart">
                                 <!-- chart -->
                                 <!-- chart -->
-                                <div class="tradingview-widget-container" id="demo">
+                                <div class="tradingview-widget-container" id="market-chart-panel">
                                     <div id="tradingview_e705a" style="height:685px"></div>
-                                    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-                                    <script type="text/javascript">
-                                        new TradingView.widget({
-                                            "autosize": true,
-                                            // "width": 1200,
-                                            // "height": 610,
-                                            "symbol": "NASDAQ:AMZN",
-                                            "interval": "1",
-                                            "timezone": "America/Los_Angeles",
-                                            "theme": "dark",
-                                            "style": "1",
-                                            "locale": "en",
-                                            "toolbar_bg": "#f1f3f6",
-                                            "enable_publishing": false,
-                                            "hide_side_toolbar": false,
-                                            "allow_symbol_change": true,
-                                            "details": true,
-                                            "studies": [
-                                                "AwesomeOscillator@tv-basicstudies",
-                                                "MACD@tv-basicstudies"
-                                            ],
-                                            "container_id": "tradingview_e705a"
-                                        });
-                                    </script>
+
                                 </div>
                                 <!-- chart end -->
                             </div>
@@ -1024,32 +794,11 @@
                                     <button class="btn btn-sm btn-link btn-round fullscreen-btn"><i class="fa fa-arrows-alt"></i></button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#demo3"><i class="fa fa-chevron-down"></i></button>
+                                    <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#market-panel-three"><i class="fa fa-chevron-down"></i></button>
                                 </li>
                             </ul>
                         </div>
-                        <div id="tablechart1">
-                            <div id="demo3" class="">
-                                <!-- TradingView Widget BEGIN -->
-                                <div class="tradingview-widget-container" style="width: 100%; height: 350px;">
-                                    <div class="tradingview-widget-container__widget"></div>
-                                    <!-- <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/markets/cryptocurrencies/prices-all/" rel="noopener" target="_blank"><span class="blue-text">Cryptocurrency Markets</span></a> by TradingView</div> -->
-                                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-screener.js" async>
-                                        {
-                                            "width": "100%",
-                                            "height": "350",
-                                            "defaultColumn": "overview",
-                                            "screener_type": "crypto_mkt",
-                                            "displayCurrency": "USD",
-                                            "colorTheme": "dark",
-                                            "locale": "en"
-                                        }
-                                    </script>
-                                </div>
-                                <!-- TradingView Widget END -->
-                            </div>
-
-                        </div>
+                        <div id="crypto-market-widget" class="tradingview-widget-container market-category-chart" aria-live="polite">No crypto market is currently listed.</div>
                     </div>
                 </div>
                 <!-- </div> -->
@@ -1068,174 +817,11 @@
                                     <button class="btn btn-sm btn-link btn-round fullscreen-btn"><i class="fa fa-arrows-alt"></i></button>
                                 </li>
                                 <li class="nav-item">
-                                    <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#demo1"><i class="fa fa-chevron-down"></i></button>
+                                    <button class="btn btn-sm btn-link btn-round" data-toggle="collapse" data-target="#market-panel-one"><i class="fa fa-chevron-down"></i></button>
                                 </li>
                             </ul>
                         </div>
-                        <div id="tablechart2">
-                            <div id="demo1" class="">
-                                <div class="tradingview-widget-container" style="width: 100%; height: 350px;">
-                                    <!-- TradingView Widget BEGIN -->
-                                    <!-- <div class="tradingview-widget-container"> -->
-                                    <div class="tradingview-widget-container__widget"></div>
-                                    <!-- <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com" rel="noopener" target="_blank"><span class="blue-text">stock</span></a> by TradingView</div> -->
-                                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
-                                        {
-                                            "width": "100%",
-                                            "height": "350",
-                                            "symbolsGroups": [{
-                                                    "name": "stock",
-                                                    "symbols": [{
-                                                            "name": "NASDAQ:NDAQ",
-                                                            "displayName": "NASDAQ"
-                                                        },
-                                                        {
-                                                            "name": "NASDAQ:AAPL",
-                                                            "displayName": "APPLE STOCK"
-                                                        },
-                                                        {
-                                                            "name": "NASDAQ:GOOGL",
-                                                            "displayName": "GOOGL"
-                                                        },
-                                                        {
-                                                            "name": "NASDAQ:NVAX",
-                                                            "displayName": "NVAX NA"
-                                                        },
-                                                        {
-                                                            "name": "NASDAQ:AMZN",
-                                                            "displayName": "AMZN"
-                                                        },
-                                                        {
-                                                            "name": "NASDAQ:FB",
-                                                            "displayName": "FACEB"
-                                                        },
-                                                        {
-                                                            "name": "NASDAQ:TLSA",
-                                                            "displayName": "TLSA"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "name": "Indices",
-                                                    "originalName": "Indices",
-                                                    "symbols": [{
-                                                            "name": "FOREXCOM:SPXUSD",
-                                                            "displayName": "S&P 500"
-                                                        },
-                                                        {
-                                                            "name": "FOREXCOM:NSXUSD",
-                                                            "displayName": "Nasdaq 100"
-                                                        },
-                                                        {
-                                                            "name": "FOREXCOM:DJI",
-                                                            "displayName": "Dow 30"
-                                                        },
-                                                        {
-                                                            "name": "INDEX:NKY",
-                                                            "displayName": "Nikkei 225"
-                                                        },
-                                                        {
-                                                            "name": "INDEX:DEU30",
-                                                            "displayName": "DAX Index"
-                                                        },
-                                                        {
-                                                            "name": "FOREXCOM:UKXGBP",
-                                                            "displayName": "UK 100"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "name": "Commodities",
-                                                    "originalName": "Commodities",
-                                                    "symbols": [{
-                                                            "name": "CME_MINI:ES1!",
-                                                            "displayName": "S&P 500"
-                                                        },
-                                                        {
-                                                            "name": "CME:6E1!",
-                                                            "displayName": "Euro"
-                                                        },
-                                                        {
-                                                            "name": "COMEX:GC1!",
-                                                            "displayName": "Gold"
-                                                        },
-                                                        {
-                                                            "name": "NYMEX:CL1!",
-                                                            "displayName": "Crude Oil"
-                                                        },
-                                                        {
-                                                            "name": "NYMEX:NG1!",
-                                                            "displayName": "Natural Gas"
-                                                        },
-                                                        {
-                                                            "name": "CBOT:ZC1!",
-                                                            "displayName": "Corn"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "name": "Bonds",
-                                                    "originalName": "Bonds",
-                                                    "symbols": [{
-                                                            "name": "CME:GE1!",
-                                                            "displayName": "Eurodollar"
-                                                        },
-                                                        {
-                                                            "name": "CBOT:ZB1!",
-                                                            "displayName": "T-Bond"
-                                                        },
-                                                        {
-                                                            "name": "CBOT:UB1!",
-                                                            "displayName": "Ultra T-Bond"
-                                                        },
-                                                        {
-                                                            "name": "EUREX:FGBL1!",
-                                                            "displayName": "Euro Bund"
-                                                        },
-                                                        {
-                                                            "name": "EUREX:FBTP1!",
-                                                            "displayName": "Euro BTP"
-                                                        },
-                                                        {
-                                                            "name": "EUREX:FGBM1!",
-                                                            "displayName": "Euro BOBL"
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    "name": "Forex",
-                                                    "originalName": "Forex",
-                                                    "symbols": [{
-                                                            "name": "FX:EURUSD"
-                                                        },
-                                                        {
-                                                            "name": "FX:GBPUSD"
-                                                        },
-                                                        {
-                                                            "name": "FX:USDJPY"
-                                                        },
-                                                        {
-                                                            "name": "FX:USDCHF"
-                                                        },
-                                                        {
-                                                            "name": "FX:AUDUSD"
-                                                        },
-                                                        {
-                                                            "name": "FX:USDCAD"
-                                                        }
-                                                    ]
-                                                }
-                                            ],
-                                            "showSymbolLogo": true,
-                                            "colorTheme": "dark",
-                                            "isTransparent": false,
-                                            "locale": "en"
-                                        }
-                                    </script>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <div id="equity-market-widget" class="tradingview-widget-container market-category-chart" aria-live="polite">No equity market is currently listed.</div>
                 </div>
             </div>
 
@@ -1312,71 +898,10 @@
 
 
     <!-- Modal Start-->
-    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">×</span> </button>
-                </div>
-                <div class="modal-body"> ... </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary">Save changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
 
-    <div class="modal dark_bg fade" id="bitcoin_dpa" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content ncard"><div class="vt-preview-note">Preview only — payment providers are not connected.</div>
-                <div class="modal-body">
-                    <div class="form-group" align="center">
-                        <label for="recipient-name" class="form-control-label font-weight-bold">Scan Ethereum QR Code to copy wallet address</label>
-                        <hr>
 
-                        <hr style="color:white">
-                        <div class="input-group mb-3" style="width:80%">
-                            <input style="color:black" id="myInputa" type="text" value="PAYMENT_PROVIDER_NOT_CONNECTED" class="form-control" readonly="">
-                            <div class="input-group-append">
-                                <button type="button" onclick="copyWalleta()" class="btn btn-success" value="Copy Wallet">Copy Wallet</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <form method="POST" enctype="multipart/form-data" action="#" data-preview-form onsubmit="return false;">
-                    <div class="form-group" style="border: 0px solid grey;border-radius:5px;padding:15px;">
-                        <span class="form-control-label font-weight-bold text-center" style="color:#17a2b8;font-size:12px">
-            If your payment was successful, Please upload payment proof below.
-          </span>
-                        <hr>
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <label for="upload" class="input-group-text">
-                Upload
-              </label>
-                            </div>
-                            <input type="file" name="file" class="form-control" id="upload" required="">
-                            <input type="hidden" value="" name="deposit_name">
-                            <input type="hidden" value="" name="deposit_type">
-                        </div>
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <label for="amount" class="input-group-text">
-                Amount : د.إ            </label>
-                            </div>
-                            <input type="number" name="amount" step="0.01" class="form-control" min="100" id="amount" placeholder="0" required="">
-                        </div>
-                        <hr>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" name="paida" class="btn btn-primary">Submit</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+
 
 
 
@@ -1401,7 +926,7 @@
     <script src="./dash/js/core/bootstrap.min.js"></script>
     <script src="./temp/home/dataTables.responsive.min.js"></script>
     <script src="./temp/home/adminux.js" type="text/javascript"></script>
-    <script src="./temp/home/dashboard1.js"></script>
+
     <script src="./temp/home/print.js"></script>
 
 
@@ -1457,145 +982,6 @@
         });
     </script>
 
-    <div class="modal dark_bg fade" id="deposit-32" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" style="display: none;">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content ncard">
-                <div class="modal-body">
-                    <div class="form-group" align="center">
-                        <label for="recipient-name" class="form-control-label font-weight-bold">Scan USDT QR Code to copy wallet address</label>
-                        <hr>
-                        <div class="vt-payment-qr-placeholder">Payment QR appears when Vertix Trade payments are connected.</div>
-
-                        <hr style="color:white">
-                        <div class="input-group mb-3" style="width:80%">
-                            <input style="color:black" id="wallet-address-32" type="text" value="PAYMENT_PROVIDER_NOT_CONNECTED" class="form-control" readonly="">
-                            <div class="input-group-append">
-                                <button type="button" onclick="copyWallet32()" class="btn btn-success" value="Copy Wallet">Copy Wallet</button>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-                <form method="POST" enctype="multipart/form-data" action="#" data-preview-form onsubmit="return false;">
-                    <div class="form-group" style="border: 0px solid grey;border-radius:5px;padding:15px;">
-                        <span class="form-control-label font-weight-bold text-center" style="color:#17a2b8;font-size:12px">
-            If your payment was successful, Please upload payment proof below.
-          </span>
-                        <hr>
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <label for="upload" class="input-group-text">
-                Upload
-              </label>
-                            </div>
-                            <input type="file" name="proof" class="form-control" id="upload" required="">
-                            <input type="hidden" name="paymethd_method" value="USDT">
-                        </div>
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <label for="amount" class="input-group-text">
-                Amount : د.إ             </label>
-                            </div>
-                            <input type="number" name="amount" step="0.01" class="form-control" min="100" id="amount" placeholder="0" required="">
-
-                            <input type="hidden" name="mode" value="USDT">
-                        </div>
-                        <hr>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" name="paid" class="btn btn-primary">Submit</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function copyWallet32() {
-            var copyText = document.getElementById("wallet-address-32");
-            var newText = copyText.value;
-            copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
-            Swal.fire({
-                position: 'center',
-                icon: 'success',
-                title: 'Address Copied',
-                text: newText,
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-    </script>
-
-    <div class="modal dark_bg fade" id="deposit-31" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" style="display: none;">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content ncard">
-                <div class="modal-body">
-                    <div class="form-group" align="center">
-                        <label for="recipient-name" class="form-control-label font-weight-bold">Scan Pix QR Code to copy wallet address</label>
-                        <hr>
-                        <div class="vt-payment-qr-placeholder">Payment QR appears when Vertix Trade payments are connected.</div>
-
-                        <hr style="color:white">
-                        <div class="input-group mb-3" style="width:80%">
-                            <input style="color:black" id="wallet-address-31" type="text" value="" class="form-control" readonly="">
-                            <div class="input-group-append">
-                                <button type="button" onclick="copyWallet31()" class="btn btn-success" value="Copy Wallet">Copy Wallet</button>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-                <form method="POST" enctype="multipart/form-data" action="#" data-preview-form onsubmit="return false;">
-                    <div class="form-group" style="border: 0px solid grey;border-radius:5px;padding:15px;">
-                        <span class="form-control-label font-weight-bold text-center" style="color:#17a2b8;font-size:12px">
-            If your payment was successful, Please upload payment proof below.
-          </span>
-                        <hr>
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <label for="upload" class="input-group-text">
-                Upload
-              </label>
-                            </div>
-                            <input type="file" name="proof" class="form-control" id="upload" required="">
-                            <input type="hidden" name="paymethd_method" value="Pix">
-                        </div>
-                        <div class="input-group mb-3">
-                            <div class="input-group-prepend">
-                                <label for="amount" class="input-group-text">
-                Amount : د.إ             </label>
-                            </div>
-                            <input type="number" name="amount" step="0.01" class="form-control" min="100" id="amount" placeholder="0" required="">
-
-                            <input type="hidden" name="mode" value="Pix">
-                        </div>
-                        <hr>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" name="paid" class="btn btn-primary">Submit</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function copyWallet31() {
-            var copyText = document.getElementById("wallet-address-31");
-            var newText = copyText.value;
-            copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
-            Swal.fire({
-                position: 'center',
-                icon: 'success',
-                title: 'Address Copied',
-                text: newText,
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-    </script>
 
 
 
@@ -1605,79 +991,27 @@
 
 
 
-    <div class="modal dark_bg fade" id="order_deposit" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" style="display: none;">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <form method="POST" action="#" data-preview-form onsubmit="return false;">
-                        <div class="form-group">
-                            <label for="recipient-name" class="form-control-label">Full Name:</label>
-                            <input type="text" name="name" style="color:black" value="Avery Morgan" class="form-control" id="recipient-name" readonly="">
-                        </div>
-                        <div class="form-group">
-                            <label for="recipient-name" class="form-control-label">Email:</label>
-                            <input type="email" name="email" style="color:black" value="hello@vertixtrade.com" class="form-control" id="recipient-name" readonly="">
-                        </div>
-                        <div class="form-group">
-                            <label for="recipient-name" class="form-control-label">Account Type:</label>
-                            <select name="mode" style="border:1px solid grey" class="form-control" id="recipient-name" required="">
-              <option value="" selected="" disabled="">Deposit Type</option>
-              <!-- <option value="Ethereum">Ethereum</option> -->
-              <option value="Litecoin">Litecoin</option>
-              <option value="BANK TRANSFER">BANK TRANSFER</option>
-                  <option value="LITCOIN">LITCOIN</option>
-                  <option value="BITCOIN CASH">BITCOIN CASH</option>
-                  <option value="USDT">USDT</option>
-                  <option value="PAYPAL">PAYPAL</option>
-                  <option value="STELLER">STELLER</option>
-                  <option value="WESTERN UNION">WESTERN UNION</option>
-                  <option value="SKRILL">SKRILL</option>
-                  <option value="MONEY GRAM">MONEY GRAM</option>
-            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="recipient-name" class="form-control-label">Amount</label>
-                            <input type="number" step="0.01" name="amount" class="form-control" id="recipient-name" required="">
 
-                        </div>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" name="request_deposit" class="btn btn-primary">Request</button>
-                    </form>
-                </div>
-                <!-- <div class="modal-footer">
-      </div> -->
-            </div>
-        </div>
-    </div>
+
+
+
+
+
+
+
     <!-- Modal Close -->
 
-    <script>
-        function copyAddi() {
-            var copyText = document.getElementById("myInputa");
-            var newText = copyText.value;
-            copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
-            Swal.fire({
-                position: 'center',
-                icon: 'success',
-                title: 'Address Copied',
-                text: newText,
-                showConfirmButton: false,
-                timer: 1500
-            });
-        }
-    </script>
+
 
     <div class="modal dark_bg fade" id="mail_support" tabindex="-1" role="dialog" aria-labelledby="mailSupportLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content ncard">
                 <div class="modal-body">
-                    <form method="POST" action="#" data-preview-form onsubmit="return false;">
+                    <form id="support-form" method="post" action="#">
 
-                        <input type="hidden" name="to_email" value="Vertix Trade Support">
-                        <input type="hidden" name="email" value="hello@vertixtrade.com" readonly>
-                        <input type="hidden" name="name" value="Avery Morgan" readonly>
+
+
+
 
                         <div class="form-group">
                             <label for="subject-field" class="form-control-label">Subject:</label>
@@ -1689,6 +1023,7 @@
                             <textarea id="message-text" name="message" class="form-control" rows="10" placeholder="Click here to compose message" required></textarea>
                         </div>
 
+                        <p class="form-status" aria-live="polite"></p>
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-secondary mr-2" data-dismiss="modal">Cancel</button>
                             <button type="submit" name="contact" class="btn btn-primary">Send message</button>
@@ -1706,25 +1041,6 @@
 
 
 
-    <script>
-        document.getElementById('asset_type').addEventListener('change', function() {
-            let assetType = this.value;
-
-            // Hide all first
-            document.getElementById('trade_pair1_container').style.display = 'none';
-            document.getElementById('trade_pair2_container').style.display = 'none';
-            document.getElementById('trade_pair3_container').style.display = 'none';
-
-            // Show the relevant dropdown based on selected asset type
-            if (assetType === 'crypto') {
-                document.getElementById('trade_pair1_container').style.display = 'block';
-            } else if (assetType === 'stock') {
-                document.getElementById('trade_pair2_container').style.display = 'block';
-            } else if (assetType === 'forex') {
-                document.getElementById('trade_pair3_container').style.display = 'block';
-            }
-        });
-    </script>
 
 
 
@@ -1752,36 +1068,10 @@
 
 
 
-    <script>
-    (function () {
-      function inform(title, text) {
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-          window.Swal.fire({ title: title, text: text, icon: 'info', confirmButtonColor: '#f5c400' });
-        } else {
-          window.alert(title + '\n' + text);
-        }
-      }
-      document.querySelectorAll('.confirm-trade').forEach(function (button) {
-        button.addEventListener('click', function () {
-          var form = document.getElementById('tradeForm');
-          if (!form || !form.reportValidity()) return;
-          var amount = form.querySelector('input[name="amount"]').value;
-          var side = button.getAttribute('data-action') || 'trade';
-          var asset = form.querySelector('#asset_type').value;
-          var note = document.getElementById('trade-preview-note');
-          if (note) note.textContent = side.toUpperCase() + ' preview · ' + amount + ' · ' + asset + ' · no order was transmitted.';
-          inform('Trade preview only', side.toUpperCase() + ' order for ' + amount + ' (' + asset + '). No live trade was sent.');
-        });
-      });
-      document.querySelectorAll('form[data-preview-form]:not(#tradeForm)').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
-          event.preventDefault();
-          inform('Preview only', 'Vertix Trade is not connected to a payment or messaging provider. Nothing was submitted.');
-        });
-      });
-    }());
-    </script>
 
+
+
+    <script type="module" src="./js/dashboard-page.js"></script>
 </body>
 
 </html>

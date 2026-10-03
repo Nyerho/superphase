@@ -1,10 +1,258 @@
-import { registerUser, loginUser } from './firebase.js';
+import {
+  registerUser,
+  loginUser,
+  hasAdminClaim,
+  signOutUser,
+  getAuthUser,
+  resendVerificationEmail,
+  refreshAuthUser,
+  listPublicRecords
+} from './firebase.js';
 
-const qs = (selector) => document.querySelector(selector);
-const formMessage = (form, message, tone = 'error') => { const target = form.querySelector('.form-status'); if (target) { target.textContent = message; target.style.color = tone === 'success' ? '#8be4b2' : '#ff8b91'; } };
+const qs = (selector, root = document) => root.querySelector(selector);
 
-document.querySelectorAll('.mobile-menu').forEach((button) => button.addEventListener('click', () => document.querySelector('.desktop-nav')?.classList.toggle('mobile-open')));
-qs('#contact-form')?.addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget; form.reset(); formMessage(form, 'Thanks — your message is in the queue.', 'success'); });
-qs('#newsletter-form')?.addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget; form.reset(); formMessage(form, 'You are on the list. Watch your inbox.', 'success'); });
-qs('#register-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; formMessage(form, 'Creating your account…', 'success'); try { await registerUser(form.email.value, form.password.value, { name: form.name.value }); window.location.href = 'user-dashboard.html'; } catch (error) { formMessage(form, error.message || 'Unable to create the account.'); button.disabled = false; } });
-qs('#login-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; formMessage(form, 'Checking your details…', 'success'); try { await loginUser(form.email.value, form.password.value); window.location.href = 'user-dashboard.html'; } catch (error) { formMessage(form, error.message || 'Unable to sign in.'); button.disabled = false; } });
+function setStatus(form, message, tone = 'error') {
+  const target = qs('.form-status', form);
+  if (!target) return;
+  target.textContent = message;
+  target.dataset.tone = tone;
+}
+
+function errorMessage(error) {
+  const messages = {
+    'auth/email-already-in-use': 'An account with this email address already exists.',
+    'auth/invalid-email': 'Enter a valid email address.',
+    'auth/weak-password': 'Choose a stronger password.',
+    'auth/invalid-credential': 'The email address or password is incorrect.',
+    'auth/user-disabled': 'This account is disabled. Contact Vertix Trade support.',
+    'auth/network-request-failed': 'A network error occurred. Check your connection and try again.',
+    'permission-denied': 'Your account could not be saved. Contact Vertix Trade support.',
+    'unavailable': 'Account services are temporarily unavailable. Try again shortly.'
+  };
+  return messages[error?.code] || error?.message || 'The request could not be completed. Try again.';
+}
+
+function populateCurrencies() {
+  const select = qs('#preferred-currency');
+  if (!select) return;
+  const fallback = ['AUD', 'CAD', 'CHF', 'CNY', 'EUR', 'GBP', 'INR', 'JPY', 'NGN', 'NZD', 'SGD', 'USD', 'ZAR'];
+  const codes = typeof Intl.supportedValuesOf === 'function'
+    ? Intl.supportedValuesOf('currency')
+    : fallback;
+  const displayNames = typeof Intl.DisplayNames === 'function'
+    ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'currency' })
+    : null;
+  const options = codes.map((code) => ({ code, label: `${code} — ${displayNames?.of(code) || code}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  for (const { code, label } of options) {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = label;
+    select.append(option);
+  }
+}
+
+qs('.mobile-menu')?.addEventListener('click', () => qs('.desktop-nav')?.classList.toggle('mobile-open'));
+populateCurrencies();
+
+globalThis.addEventListener?.('click', async (event) => {
+  if (!event.target.closest('[data-logout]')) return;
+  event.preventDefault();
+  try {
+    await signOutUser();
+    window.location.assign('/login.html');
+  } catch (error) {
+    console.error('Sign out failed:', error);
+  }
+});
+
+document.addEventListener('click', async (event) => {
+  if (event.target.closest('[data-resend-verification]')) {
+    event.preventDefault();
+    const button = event.target.closest('[data-resend-verification]');
+    const status = qs('[data-verification-status]');
+    button.disabled = true;
+    try {
+      await resendVerificationEmail();
+      if (status) status.textContent = 'A verification email has been sent.';
+    } catch (error) {
+      if (status) status.textContent = errorMessage(error);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  if (event.target.closest('[data-check-verification]')) {
+    event.preventDefault();
+    const user = await refreshAuthUser();
+    if (user?.emailVerified) window.location.assign('/user-dashboard.html');
+    else if (qs('[data-verification-status]')) qs('[data-verification-status]').textContent = 'Email verification is still pending.';
+  }
+});
+
+qs('#register-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+  const data = new FormData(form);
+  const password = String(data.get('password') || '');
+  const confirmation = String(data.get('confirmPassword') || '');
+  const dateOfBirth = String(data.get('dateOfBirth') || '');
+
+  if (password.length < 12) {
+    setStatus(form, 'Use a password with at least 12 characters.');
+    qs('[name="password"]', form).focus();
+    return;
+  }
+  if (password !== confirmation) {
+    setStatus(form, 'The passwords do not match.');
+    qs('[name="confirmPassword"]', form).focus();
+    return;
+  }
+  if (dateOfBirth && dateOfBirth > new Date().toISOString().slice(0, 10)) {
+    setStatus(form, 'Enter a valid date of birth.');
+    return;
+  }
+
+  const button = qs('button[type="submit"]', form);
+  button.disabled = true;
+  setStatus(form, 'Creating your account…', 'success');
+  const profile = {
+    legalName: String(data.get('legalName') || '').trim(),
+    dateOfBirth,
+    phoneNumber: String(data.get('phoneNumber') || '').trim(),
+    countryOfResidence: String(data.get('countryOfResidence') || '').trim(),
+    nationality: String(data.get('nationality') || '').trim(),
+    addressLine1: String(data.get('addressLine1') || '').trim(),
+    addressLine2: String(data.get('addressLine2') || '').trim(),
+    city: String(data.get('city') || '').trim(),
+    region: String(data.get('region') || '').trim(),
+    postalCode: String(data.get('postalCode') || '').trim(),
+    preferredCurrency: String(data.get('preferredCurrency') || '').trim(),
+    employmentStatus: String(data.get('employmentStatus') || '').trim(),
+    sourceOfFunds: String(data.get('sourceOfFunds') || '').trim(),
+    tradingExperience: String(data.get('tradingExperience') || '').trim(),
+    accountPurpose: String(data.get('accountPurpose') || '').trim()
+  };
+
+  try {
+    const result = await registerUser(String(data.get('email') || ''), password, profile);
+    if (result.verificationSent) window.location.assign('/verify-email.html');
+    else {
+      setStatus(form, 'Your account was created. Sign in to request a verification email.', 'success');
+      button.disabled = false;
+    }
+  } catch (error) {
+    setStatus(form, errorMessage(error));
+    button.disabled = false;
+  }
+});
+
+qs('#login-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = qs('button[type="submit"]', form);
+  button.disabled = true;
+  setStatus(form, 'Signing in…', 'success');
+  try {
+    const credential = await loginUser(qs('[name="email"]', form).value, qs('[name="password"]', form).value);
+    if (!credential.user.emailVerified) {
+      window.location.assign('/verify-email.html');
+      return;
+    }
+    window.location.assign((await hasAdminClaim(credential.user, true)) ? '/admin.html' : '/user-dashboard.html');
+  } catch (error) {
+    setStatus(form, errorMessage(error));
+    button.disabled = false;
+  }
+});
+
+qs('#contact-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const subject = encodeURIComponent(String(data.get('subject') || 'Vertix Trade enquiry'));
+  const body = encodeURIComponent(`Name: ${String(data.get('name') || '').trim()}\nEmail: ${String(data.get('email') || '').trim()}\n\n${String(data.get('message') || '').trim()}`);
+  window.location.href = `mailto:hello@vertixtrade.com?subject=${subject}&body=${body}`;
+});
+
+qs('#newsletter-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const email = String(new FormData(form).get('email') || '').trim();
+  const subject = encodeURIComponent('Vertix Trade market brief subscription');
+  const body = encodeURIComponent(`Please contact me about Vertix Trade market brief updates.\nEmail: ${email}`);
+  const status = qs('.form-status', form);
+  if (status) status.textContent = 'Your email application will open so you can send the subscription request.';
+  window.location.href = `mailto:hello@vertixtrade.com?subject=${subject}&body=${body}`;
+});
+
+function escapeHTML(value = '') {
+  return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
+async function loadPublicMarkets() {
+  const target = qs('#public-market-ticker');
+  if (!target) return;
+  try {
+    const markets = (await listPublicRecords('marketAssets')).filter((item) => item.active !== false && item.tradingViewSymbol).slice(0, 12);
+    if (!markets.length) {
+      target.textContent = 'No market listings are available.';
+      return;
+    }
+    const widget = document.createElement('div');
+    widget.className = 'tradingview-widget-container__widget';
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+    script.async = true;
+    script.textContent = JSON.stringify({ symbols: markets.map((item) => ({ proName: item.tradingViewSymbol, title: item.displayName || item.symbol })), showSymbolLogo: true, colorTheme: 'dark', isTransparent: true, displayMode: 'regular', locale: 'en' });
+    target.replaceChildren(widget, script);
+  } catch {
+    target.textContent = 'Market listings are temporarily unavailable.';
+  }
+}
+
+async function loadPublicSignals() {
+  const target = qs('#public-signal-rows');
+  if (!target) return;
+  try {
+    const signals = (await listPublicRecords('signals'))
+      .filter((item) => !/closed/i.test(item.status || ''))
+      .sort((a, b) => (b.publishedAt?.seconds || b.createdAt?.seconds || 0) - (a.publishedAt?.seconds || a.createdAt?.seconds || 0))
+      .slice(0, 6);
+    const heroValue = qs('#market-pulse-value');
+    const heroLabel = qs('#market-pulse-label');
+    const heroPair = qs('#market-pulse-pair');
+    const heroConfidence = qs('#market-pulse-confidence');
+    const heroTag = qs('#market-pulse-tag');
+    const featured = signals[0];
+    if (heroValue) heroValue.textContent = featured?.direction || 'Market signals';
+    if (heroLabel) heroLabel.textContent = featured ? `Published signal · ${featured.timeframe || 'No time horizon set'}` : 'No active signal has been published.';
+    if (heroPair) heroPair.textContent = featured?.pair || featured?.asset || 'Published signal feed';
+    const featuredConfidence = featured?.confidence == null ? NaN : Number(featured.confidence);
+    if (heroConfidence) heroConfidence.textContent = featured && Number.isFinite(featuredConfidence) ? `${Math.max(0, Math.min(100, featuredConfidence))}% confidence` : '—';
+    if (heroTag) heroTag.textContent = featured ? 'Latest signal' : 'No active signal';
+    if (!signals.length) {
+      target.innerHTML = '<div class="signal-empty">No public signals are available.</div>';
+      return;
+    }
+    target.innerHTML = `<div class="table-head"><span>Asset</span><span>Direction</span><span>Confidence</span><span>Time frame</span><span>Action</span></div>${signals.map((item) => {
+      const direction = String(item.direction || 'Watch');
+      const directionClass = /^long|buy$/i.test(direction) ? 'signal-up' : (/^short|sell$/i.test(direction) ? 'signal-down' : 'signal-neutral');
+      const confidence = item.confidence == null ? NaN : Number(item.confidence);
+      const conviction = Number.isFinite(confidence) ? Math.max(0, Math.min(100, confidence)) : null;
+      return `<div class="signal-row"><div class="asset"><span class="asset-badge">${escapeHTML(String(item.asset || 'M').slice(0, 2))}</span><span><b>${escapeHTML(item.asset || '—')}</b><small>${escapeHTML(item.pair || '—')}</small></span></div><span class="${directionClass}">${escapeHTML(direction)}</span><div class="confidence"><span>${conviction === null ? '—' : `${conviction}%`}</span>${conviction === null ? '' : `<i><b style="width:${conviction}%"></b></i>`}</div><span class="mono">${escapeHTML(item.timeframe || '—')}</span><a href="login.html" class="row-action">Sign in</a></div>`;
+    }).join('')}`;
+  } catch (error) {
+    target.innerHTML = '<div class="signal-empty">Published market signals are temporarily unavailable.</div>';
+    const heroValue = qs('#market-pulse-value');
+    const heroLabel = qs('#market-pulse-label');
+    const heroTag = qs('#market-pulse-tag');
+    if (heroValue) heroValue.textContent = 'Market signals';
+    if (heroLabel) heroLabel.textContent = 'Market signal information is unavailable.';
+    if (heroTag) heroTag.textContent = 'Unavailable';
+  }
+}
+
+loadPublicMarkets();
+loadPublicSignals();

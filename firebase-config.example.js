@@ -1,9 +1,2 @@
-// Copy these values into js/firebase.js or wire them through your deployment environment.
-export const firebaseConfig = {
-  apiKey: 'YOUR_FIREBASE_API_KEY',
-  authDomain: 'YOUR_FIREBASE_AUTH_DOMAIN',
-  projectId: 'YOUR_FIREBASE_PROJECT_ID',
-  storageBucket: 'YOUR_FIREBASE_STORAGE_BUCKET',
-  messagingSenderId: 'YOUR_FIREBASE_MESSAGING_SENDER_ID',
-  appId: 'YOUR_FIREBASE_APP_ID'
-};
+// Firebase web configuration is served by /api/firebase-config from Vercel environment variables.
+// See VERCEL_ENV.md. This file is intentionally not imported by the application.
