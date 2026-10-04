@@ -67,6 +67,13 @@ export async function initializeFirebase() {
   return firebaseReady();
 }
 
+function verificationActionSettings() {
+  return {
+    url: new URL('/verify-email.html', globalThis.location.origin).toString(),
+    handleCodeInApp: false
+  };
+}
+
 export async function registerUser(email, password, profile) {
   const { auth: firebaseAuth, db: firestore } = await firebaseReady();
   const cleanEmail = String(email).trim().toLowerCase();
@@ -104,12 +111,15 @@ export async function registerUser(email, password, profile) {
     throw error;
   }
   let verificationSent = true;
+  let verificationErrorCode = '';
   try {
-    await sendEmailVerification(user);
-  } catch {
+    await sendEmailVerification(user, verificationActionSettings());
+  } catch (error) {
     verificationSent = false;
+    verificationErrorCode = error?.code || 'unknown';
+    console.error('Firebase verification-email send failed:', verificationErrorCode);
   }
-  return { user, verificationSent };
+  return { user, verificationSent, verificationErrorCode };
 }
 
 export async function loginUser(email, password) {
@@ -147,7 +157,7 @@ export async function refreshAuthUser() {
 export async function resendVerificationEmail() {
   const user = await getAuthUser();
   if (!user) throw new Error('Sign in to request a verification email.');
-  await sendEmailVerification(user);
+  await sendEmailVerification(user, verificationActionSettings());
 }
 
 export async function hasAdminClaim(user, forceRefresh = false) {
