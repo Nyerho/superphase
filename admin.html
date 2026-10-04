@@ -41,8 +41,8 @@
         <article class="admin-stat glass-panel"><small>Submitted requests</small><strong id="request-count">—</strong></article>
       </section>
       <section class="admin-panel glass-panel" id="history-admin">
-        <div class="panel-title"><h2>Global Admin history</h2><button class="button button-quiet button-small" id="refresh-history" type="button">Refresh history</button></div>
-        <p class="admin-workflow-note">Successful and failed actions performed from this Admin workspace are recorded here with the acting account and time.</p>
+        <div class="panel-title"><h2>Global Admin history</h2><div class="crud-actions"><button class="button button-quiet button-small" id="refresh-history" type="button">Refresh history</button><button class="button button-quiet button-small" id="backfill-history" type="button">Reconstruct past activity</button></div></div>
+        <p class="admin-workflow-note">Successful and failed actions performed from this Admin workspace are recorded here. Reconstructed entries are clearly marked and derived from existing account records; they do not prove which Admin originally performed the action.</p>
         <div class="admin-audit-list" id="audit-history"><div class="empty-state">Loading Admin history…</div></div>
       </section>
       <section class="admin-content-grid admin-content-grid-wide">

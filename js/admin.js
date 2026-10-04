@@ -95,6 +95,47 @@ async function renderAuditHistory(records = null) {
   }
 }
 
+async function backfillAuditHistory() {
+  const existing = await listRecords('auditLog');
+  const known = new Set(existing.map((item) => item.action).filter(Boolean));
+  const users = (await listRecords('users')).filter((item) => (item.uid || item.id) !== SYSTEM_ADMIN_UID);
+  const sources = ['requests', 'trades', 'transactions'];
+  let created = 0;
+  for (const user of users) {
+    const uid = user.uid || user.id;
+    const profileMarker = `[historical:profiles/${uid}/${uid}]`;
+    if (!known.has(profileMarker)) {
+      await recordAdminAudit(profileMarker, 'success', { text: `Historical reconstruction · member profile · ${user.email || uid} · original timestamp: ${timeText(user.createdAt || user.updatedAt)}` });
+      known.add(profileMarker);
+      created += 1;
+    }
+    for (const source of sources) {
+      let records = [];
+      try { records = await listUserRecords(uid, source); } catch (error) { console.warn(`Could not reconstruct ${source} for ${uid}`, error); }
+      for (const record of records) {
+        const marker = `[historical:${source}/${uid}/${record.id}]`;
+        if (known.has(marker)) continue;
+        const originalTime = timeText(record.createdAt || record.updatedAt);
+        await recordAdminAudit(marker, 'success', { text: `Historical reconstruction · ${source} · member ${user.email || uid} · original timestamp: ${originalTime}` });
+        known.add(marker);
+        created += 1;
+      }
+    }
+  }
+  for (const collectionName of ['signals', 'marketAssets', 'copyStrategies', 'plans', 'digitalAssets', 'news', 'marketCalendar', 'fundingMethods', 'platformSettings']) {
+    let records = [];
+    try { records = await listRecords(collectionName); } catch (error) { console.warn(`Could not reconstruct ${collectionName}`, error); }
+    for (const record of records) {
+      const marker = `[historical:${collectionName}/${record.id}]`;
+      if (known.has(marker)) continue;
+      await recordAdminAudit(marker, 'success', { text: `Historical reconstruction · ${collectionName} · original timestamp: ${timeText(record.createdAt || record.updatedAt)}` });
+      known.add(marker);
+      created += 1;
+    }
+  }
+  return created;
+}
+
 function empty(text) {
   return `<div class="empty-state">${esc(text)}</div>`;
 }
@@ -314,6 +355,16 @@ async function loadPnlTrades(uid) {
 async function start() {
   qs('#admin-operation-close')?.addEventListener('click', () => { qs('#admin-operation-modal').hidden = true; });
   qs('#refresh-history')?.addEventListener('click', () => renderAuditHistory());
+  qs('#backfill-history')?.addEventListener('click', async (event) => {
+    lockOperationButton(event.currentTarget);
+    try {
+      const created = await backfillAuditHistory();
+      status(`Historical reconstruction complete: ${created} record${created === 1 ? '' : 's'} added.`, 'success');
+      await renderAuditHistory();
+    } catch (error) {
+      status(error.message || 'Historical reconstruction could not be completed.');
+    }
+  });
   document.addEventListener('submit', (event) => {
     const button = event.target.querySelector('button[type="submit"]');
     if (button) lockOperationButton(button);

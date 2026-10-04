@@ -383,7 +383,7 @@ export async function recordAdminAudit(action, outcome = 'success', details = {}
     actorEmail: user.email || '',
     action: String(action || 'Admin operation').slice(0, 180),
     outcome: outcome === 'success' ? 'success' : 'failure',
-    details: String(details.page || window.location.pathname || '').slice(0, 120),
+    details: String(details.text || details.page || window.location.pathname || '').slice(0, 500),
     createdAt: serverTimestamp()
   });
 }
