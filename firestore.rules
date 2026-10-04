@@ -342,6 +342,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Required for Admin collectionGroup('requests') queries across all users.
+    match /{path=**}/requests/{requestId} {
+      allow read: if isAdmin() || systemAdminIdentity();
+    }
+
     match /signals/{id} {
       allow read: if true;
       allow write: if isAdmin();

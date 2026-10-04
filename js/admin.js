@@ -33,12 +33,49 @@ const validMarketSymbol = (value) => /^[A-Z0-9][A-Z0-9._:-]{0,39}$/i.test(value.
 const catalogCache = { plans: [], digitalAssets: [] };
 const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
 let starterSeedPromise;
+let activeOperationButton;
+let operationTimeout;
+
+function showOperation(message, tone = 'success') {
+  const modal = qs('#admin-operation-modal');
+  const card = modal?.querySelector('.admin-operation-card');
+  if (!modal || !card) return;
+  card.dataset.tone = tone;
+  qs('#admin-operation-icon').textContent = tone === 'success' ? '✓' : '×';
+  qs('#admin-operation-title').textContent = tone === 'success' ? 'Operation successful' : 'Operation failed';
+  qs('#admin-operation-message').textContent = message;
+  modal.hidden = false;
+}
+
+function releaseOperationButton() {
+  clearTimeout(operationTimeout);
+  if (activeOperationButton) {
+    activeOperationButton.disabled = false;
+    activeOperationButton.removeAttribute('aria-busy');
+    activeOperationButton = null;
+  }
+}
+
+function lockOperationButton(button) {
+  if (!button || activeOperationButton) return;
+  activeOperationButton = button;
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  operationTimeout = setTimeout(() => {
+    releaseOperationButton();
+    showOperation('The operation timed out. Check your connection and try again.', 'error');
+  }, 20000);
+}
 
 function status(message, tone = 'error') {
   const node = qs('#admin-status');
   if (node) {
     node.textContent = message;
     node.dataset.tone = tone;
+  }
+  if (message) {
+    releaseOperationButton();
+    showOperation(message, tone === 'success' ? 'success' : 'error');
   }
 }
 
@@ -257,6 +294,15 @@ async function loadPnlTrades(uid) {
 }
 
 async function start() {
+  qs('#admin-operation-close')?.addEventListener('click', () => { qs('#admin-operation-modal').hidden = true; });
+  document.addEventListener('submit', (event) => {
+    const button = event.target.querySelector('button[type="submit"]');
+    if (button) lockOperationButton(button);
+  }, true);
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-action], [data-kyc-status], [data-request-status], [data-market-active-toggle], [data-catalog-delete]');
+    if (button) lockOperationButton(button);
+  }, true);
   const admin = await requireAdmin();
   if (!admin) return;
   qs('#admin-email').textContent = admin.email || 'Administrator';
@@ -429,7 +475,7 @@ async function start() {
       : type === 'deposit'
         ? 'Confirm that the deposit was actually received before recording it.'
         : 'Confirm that the withdrawal was actually sent before recording it.';
-    if (!window.confirm(instructions)) return;
+    if (!window.confirm(instructions)) { releaseOperationButton(); return; }
     const button = processForm.querySelector('button[type="submit"]');
     button.disabled = true;
     try {
