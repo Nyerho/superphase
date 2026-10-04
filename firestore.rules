@@ -16,11 +16,13 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return (verified() && request.auth.token.get('admin', false) == true || systemAdminIdentity())
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.get('email', '');
+      return systemAdminIdentity()
+        || (verified()
+          && request.auth.token.get('admin', false) == true
+          && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
+          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
+          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.get('email', ''));
     }
 
     function owns(uid) {

@@ -157,7 +157,12 @@ async function render() {
       <span class="status-pill">${label(item.accountStatus)}</span><span class="status-pill">KYC: ${label(item.kycStatus || 'not_started')}</span><div class="crud-actions"><button type="button" data-kyc-status="verified" data-uid="${esc(item.uid || item.id)}">Verify KYC</button><button type="button" data-kyc-status="not_started" data-uid="${esc(item.uid || item.id)}">Reset KYC</button></div>
     </div>`).join('') : empty('No member accounts are available.');
   const memberSelect = qs('#ledger-member');
-  memberSelect.innerHTML = `<option value="">Select a member</option>${members.map((item) => `<option value="${esc(item.uid || item.id)}">${label(item.legalName || item.email)} · ${label(item.email)}</option>`).join('')}`;
+  memberSelect.innerHTML = `<option value="">Select a member</option>${members.map((item) => `<option value="${esc(item.uid || item.id)}" data-currency="${esc(item.preferredCurrency || '')}">${label(item.legalName || item.email)} · ${label(item.email)}</option>`).join('')}`;
+  memberSelect.onchange = () => {
+    const memberCurrency = memberSelect.selectedOptions[0]?.dataset.currency;
+    if (!memberCurrency) return;
+    for (const input of document.querySelectorAll('#balance-form [name="currency"], #ledger-transaction-form [name="currency"], #ledger-trade-form [name="currency"]')) input.value = memberCurrency;
+  };
   qs('#ledger-market').innerHTML = `<option value="">Select a market</option>${assets.filter((item) => item.active === true).map((item) => `<option value="${esc(item.id)}" data-symbol="${esc(item.symbol)}">${label(item.displayName)} · ${label(item.symbol)}</option>`).join('')}`;
 
   const latestRequests = requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 20);
