@@ -215,10 +215,26 @@ async function renderPage() {
     content.innerHTML = analysis.length ? `<div class="feature-grid">${analysis.map((item) => `<article class="indicator-card glass-panel rise-in"><span class="content-label">${esc(item.pair || item.asset || '')}</span><h2>${esc(item.title || 'Technical analysis')}</h2><strong>${esc(item.direction || '')}</strong><p>${esc(item.technicalSummary || item.analysis)}</p></article>`).join('')}</div>` : empty('No technical analysis has been published.');
   } else if (pageKey === 'chart') {
     const marketOptions = activeMarkets.filter((item) => validTradingViewSymbol(item.tradingViewSymbol));
-    const select = `<label>Market<select id="chart-market">${marketOptions.map((item) => `<option value="${esc(item.tradingViewSymbol)}">${esc(item.displayName || item.symbol)}</option>`).join('')}</select></label>`;
-    content.innerHTML = marketOptions.length ? `${panel('Live market chart', `${select}<div id="member-tradingview-chart" class="market-chart-frame"></div>`)}<p class="inline-note">Market chart data is provided by TradingView.</p>` : empty('No chart-enabled markets are listed.');
-    if (marketOptions.length) mountTradingViewChart(marketOptions[0].tradingViewSymbol, 'member-tradingview-chart');
-    document.getElementById('chart-market')?.addEventListener('change', (event) => mountTradingViewChart(event.target.value, 'member-tradingview-chart'));
+    const categories = [...new Set(marketOptions.map((item) => item.assetType).filter(Boolean))].sort();
+    const controls = `<div class="chart-controls"><label>Search pairs<input id="chart-search" type="search" placeholder="BTC, EURUSD, Apple…"></label><label>Category<select id="chart-category"><option value="">All categories</option>${categories.map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}</select></label><label>Market<select id="chart-market"></select></label></div>`;
+    content.innerHTML = marketOptions.length ? `${panel('Live market chart', `${controls}<div id="member-tradingview-chart" class="market-chart-frame"></div>`)}<p class="inline-note">Market chart data is provided by TradingView. Pair availability depends on the chart provider’s supported symbols.</p>` : empty('No chart-enabled markets are listed.');
+    if (marketOptions.length) {
+      const search = document.getElementById('chart-search');
+      const category = document.getElementById('chart-category');
+      const select = document.getElementById('chart-market');
+      const refreshChartOptions = () => {
+        const query = String(search.value || '').trim().toLowerCase();
+        const selectedCategory = category.value;
+        const filtered = marketOptions.filter((item) => (!selectedCategory || item.assetType === selectedCategory) && (!query || `${item.symbol} ${item.displayName} ${item.tradingViewSymbol}`.toLowerCase().includes(query)));
+        select.innerHTML = filtered.map((item) => `<option value="${esc(item.tradingViewSymbol)}">${esc(item.displayName || item.symbol)} · ${esc(item.symbol)}</option>`).join('');
+        if (filtered[0]) mountTradingViewChart(filtered[0].tradingViewSymbol, 'member-tradingview-chart');
+        else document.getElementById('member-tradingview-chart').textContent = 'No pairs match your filter.';
+      };
+      search.addEventListener('input', refreshChartOptions);
+      category.addEventListener('change', refreshChartOptions);
+      select.addEventListener('change', (event) => mountTradingViewChart(event.target.value, 'member-tradingview-chart'));
+      refreshChartOptions();
+    }
   } else if (pageKey === 'calendar') {
     const items = await listPublicRecords('marketCalendar');
     const events = items.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));

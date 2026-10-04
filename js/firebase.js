@@ -44,6 +44,8 @@ let auth;
 let db;
 
 let firebasePromise;
+const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
+const SYSTEM_ADMIN_EMAIL = 'admin@vertixtrades.com';
 
 function firebaseReady() {
   if (!firebasePromise) {
@@ -181,6 +183,10 @@ export async function hasAdminClaim(user, forceRefresh = false) {
   return token.claims.admin === true;
 }
 
+export function isSystemAdminAccount(user) {
+  return user?.uid === SYSTEM_ADMIN_UID && user?.email?.toLowerCase() === SYSTEM_ADMIN_EMAIL;
+}
+
 export async function getUserProfile(uid) {
   const { db: firestore } = await firebaseReady();
   const snapshot = await getDoc(doc(firestore, 'users', uid));
@@ -228,12 +234,17 @@ export async function requireAdmin() {
     window.location.assign('/verify-email.html');
     return null;
   }
-  if (!(await hasAdminClaim(user, true))) {
+  const bootstrapIdentity = isSystemAdminAccount(user);
+  if (!(await hasAdminClaim(user, true)) && !bootstrapIdentity) {
     window.location.assign('/index.html');
     return null;
   }
   const { db: firestore } = await firebaseReady();
-  const adminSnapshot = await getDoc(doc(firestore, 'admins', user.uid));
+  let adminSnapshot = await getDoc(doc(firestore, 'admins', user.uid));
+  if (!adminSnapshot.exists() && bootstrapIdentity) {
+    await setDoc(doc(firestore, 'admins', user.uid), { uid: user.uid, email: SYSTEM_ADMIN_EMAIL, role: 'admin', active: true, updatedAt: serverTimestamp() }, { merge: true });
+    adminSnapshot = await getDoc(doc(firestore, 'admins', user.uid));
+  }
   const adminProfile = adminSnapshot.exists() ? adminSnapshot.data() : null;
   if (!adminProfile || adminProfile.active !== true || adminProfile.role !== 'admin' || adminProfile.email?.toLowerCase() !== user.email?.toLowerCase()) {
     window.location.assign('/index.html');

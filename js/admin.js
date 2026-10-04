@@ -99,8 +99,8 @@ function requestActions(item) {
 async function seedStarterContent() {
   for (const collectionName of ['signals', 'marketAssets', 'copyStrategies', 'plans', 'digitalAssets', 'news', 'marketCalendar']) {
     const existing = await listRecords(collectionName);
-    if (existing.length) continue;
     for (const record of starterRecords(collectionName)) {
+      if (existing.some((item) => item.id === record.id || (collectionName === 'marketAssets' && item.symbol === record.symbol))) continue;
       try {
         const { id, ...data } = record;
         await createRecord(collectionName, data);

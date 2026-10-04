@@ -2,6 +2,7 @@ import {
   registerUser,
   loginUser,
   hasAdminClaim,
+  isSystemAdminAccount,
   signOutUser,
   getAuthUser,
   resendVerificationEmail,
@@ -145,7 +146,7 @@ document.addEventListener('click', async (event) => {
       const user = await refreshAuthUser();
       if (user?.emailVerified) {
         await markEmailVerified(user);
-        window.location.assign((await hasAdminClaim(user, true)) ? '/admin.html' : '/user-dashboard.html');
+        window.location.assign(((await hasAdminClaim(user, true)) || isSystemAdminAccount(user)) ? '/admin.html' : '/user-dashboard.html');
       } else if (qs('[data-verification-status]')) {
         qs('[data-verification-status]').textContent = 'Email verification is still pending. Open the latest verification email, then try again.';
       }
@@ -227,7 +228,7 @@ qs('#login-form')?.addEventListener('submit', async (event) => {
       return;
     }
     await markEmailVerified(credential.user);
-    window.location.assign((await hasAdminClaim(credential.user, true)) ? '/admin.html' : '/user-dashboard.html');
+    window.location.assign(((await hasAdminClaim(credential.user, true)) || isSystemAdminAccount(credential.user)) ? '/admin.html' : '/user-dashboard.html');
   } catch (error) {
     setStatus(form, errorMessage(error));
     button.disabled = false;
