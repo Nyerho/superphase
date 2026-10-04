@@ -68,6 +68,7 @@ function lockOperationButton(button) {
 }
 
 function status(message, tone = 'error') {
+  const operationWasActive = Boolean(activeOperationButton);
   const node = qs('#admin-status');
   if (node) {
     node.textContent = message;
@@ -75,7 +76,7 @@ function status(message, tone = 'error') {
   }
   if (message) {
     releaseOperationButton();
-    showOperation(message, tone === 'success' ? 'success' : 'error');
+    if (operationWasActive || tone === 'success') showOperation(message, tone === 'success' ? 'success' : 'error');
   }
 }
 
@@ -443,10 +444,13 @@ async function start() {
     try {
       const uid = ledgerMemberId();
       const data = new FormData(event.currentTarget);
-      await applyTradePnl(uid, String(data.get('tradeId') || ''), Number(data.get('pnl')), Number(data.get('closePrice')) || undefined, ledgerDate(data.get('at')));
+      const closePriceText = String(data.get('closePrice') || '').trim();
+      const closePrice = closePriceText ? Number(closePriceText) : undefined;
+      if (closePriceText && (!Number.isFinite(closePrice) || closePrice <= 0)) throw new Error('Close price must be a positive number or left blank.');
+      await applyTradePnl(uid, String(data.get('tradeId') || ''), Number(data.get('pnl')), closePrice, ledgerDate(data.get('at')));
       status('Trade settled and the member balance was updated.', 'success');
       event.currentTarget.reset();
-      await render();
+      try { await render(); } catch (refreshError) { console.warn('Admin refreshed with a settled trade but could not redraw every section.', refreshError); }
     } catch (error) { status(error.message || 'Trade P/L could not be settled.'); }
   });
 
