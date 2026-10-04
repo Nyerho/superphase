@@ -11,11 +11,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return verified()
-        && request.auth.token.admin == true
+        && request.auth.token.get('admin', false) == true
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.email;
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.get('email', '');
     }
 
     function owns(uid) {
@@ -24,6 +24,58 @@ service cloud.firestore {
 
     function validCurrency(value) {
       return value is string && value.matches('^[A-Z]{3}$');
+    }
+
+    function accountCurrency(uid, value) {
+      return validCurrency(value)
+        && get(/databases/$(database)/documents/users/$(uid)).data.preferredCurrency == value;
+    }
+
+    function activeMarket(marketId, symbol) {
+      let marketPath = /databases/$(database)/documents/marketAssets/$(marketId);
+      return marketId is string
+        && marketId == symbol
+        && marketId.matches('^[A-Z0-9][A-Z0-9._:-]{0,39}$')
+        && exists(marketPath)
+        && get(marketPath).data.active == true
+        && get(marketPath).data.symbol == symbol;
+    }
+
+    function validMarketAsset(data) {
+      return data.keys().hasAll(['displayName', 'symbol', 'assetType', 'active'])
+        && data.keys().hasOnly(['displayName', 'symbol', 'assetType', 'tradingViewSymbol', 'active', 'createdAt', 'updatedAt'])
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 80
+        && data.symbol is string
+        && data.symbol.matches('^[A-Z0-9][A-Z0-9._:-]{0,39}$')
+        && data.assetType in ['crypto', 'stocks', 'forex', 'indices', 'commodities', 'other']
+        && data.active is bool
+        && (!('tradingViewSymbol' in data)
+          || data.tradingViewSymbol == ''
+          || (data.tradingViewSymbol is string && data.tradingViewSymbol.matches('^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$')));
+    }
+
+    function requestMatchesAfter(uid, requestId, requestType, requestStatus, recordCollection) {
+      let requestPath = /databases/$(database)/documents/users/$(uid)/requests/$(requestId);
+      let recordPath = /databases/$(database)/documents/users/$(uid)/$(recordCollection)/$(requestId);
+      return existsAfter(requestPath)
+        && getAfter(requestPath).data.uid == uid
+        && getAfter(requestPath).data.type == requestType
+        && getAfter(requestPath).data.status == requestStatus
+        && getAfter(requestPath).data.resultId == requestId
+        && existsAfter(recordPath)
+        && getAfter(recordPath).data.uid == uid
+        && getAfter(recordPath).data.requestId == requestId;
+    }
+
+    function balanceBeforeMatches(uid, amount, currency) {
+      let profilePath = /databases/$(database)/documents/users/$(uid);
+      let profile = get(profilePath).data;
+      return exists(profilePath)
+        && profile.preferredCurrency == currency
+        && ((!('balance' in profile) && amount == 0) || (('balance' in profile) && profile.balance == amount))
+        && (amount == 0 || !('balanceCurrency' in profile) || profile.balanceCurrency == currency);
     }
 
     match /users/{uid} {
@@ -67,7 +119,10 @@ service cloud.firestore {
           'preferredCurrency', 'phoneNumber', 'addressLine1', 'addressLine2',
           'city', 'region', 'postalCode', 'updatedAt'
         ])
-        && (!('preferredCurrency' in request.resource.data) || validCurrency(request.resource.data.preferredCurrency)));
+        && validCurrency(request.resource.data.preferredCurrency)
+        && (request.resource.data.preferredCurrency == resource.data.preferredCurrency
+          || !('balance' in resource.data)
+          || resource.data.balance == 0));
       allow delete: if false;
 
       match /requests/{requestId} {
@@ -77,31 +132,109 @@ service cloud.firestore {
           && request.resource.data.status == 'submitted'
           && request.resource.data.type in ['trade', 'deposit', 'withdrawal', 'loan', 'plan', 'support']
           && request.resource.data.keys().hasOnly([
-            'uid', 'type', 'status', 'amount', 'currency', 'symbol', 'side',
+            'uid', 'type', 'status', 'amount', 'currency', 'marketId', 'symbol', 'side',
             'leverage', 'duration', 'takeProfit', 'stopLoss', 'method',
             'destination', 'purpose', 'message', 'subject', 'planId', 'createdAt'
           ])
           && (!('amount' in request.resource.data) || (request.resource.data.amount is number && request.resource.data.amount >= 0))
           && (request.resource.data.type in ['support', 'plan'] || (request.resource.data.amount is number && request.resource.data.amount > 0))
-          && (!('currency' in request.resource.data) || validCurrency(request.resource.data.currency))
+          && (request.resource.data.type in ['trade', 'deposit', 'withdrawal', 'loan']
+            ? accountCurrency(uid, request.resource.data.currency)
+            : (!('currency' in request.resource.data) || accountCurrency(uid, request.resource.data.currency)))
+          && (request.resource.data.type != 'deposit' || request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset'])
+          && (request.resource.data.type != 'withdrawal' || (request.resource.data.get('destination', '') is string && request.resource.data.get('destination', '').size() >= 1 && request.resource.data.get('destination', '').size() <= 100))
+          && (request.resource.data.type != 'loan' || request.resource.data.get('purpose', '') in ['business', 'personal', 'other'])
           && (request.resource.data.type != 'trade' || (
-            request.resource.data.symbol is string
+            request.resource.data.keys().hasAll(['symbol', 'marketId', 'side', 'leverage'])
+            && request.resource.data.symbol is string
+            && request.resource.data.marketId is string
+            && activeMarket(request.resource.data.marketId, request.resource.data.symbol)
             && request.resource.data.side in ['buy', 'sell']
             && request.resource.data.leverage is number
             && request.resource.data.leverage >= 1
             && request.resource.data.leverage <= 10
           ));
-        allow update, delete: if isAdmin();
+        allow update: if isAdmin()
+          && request.resource.data.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'resultId', 'processedAt'])
+          && (
+            (request.resource.data.status in ['processing', 'reviewed', 'rejected']
+              && !('resultId' in resource.data)
+              && !('resultId' in request.resource.data))
+            || (request.resource.data.status == 'accepted'
+              && requestMatchesAfter(uid, requestId, 'trade', 'accepted', 'trades'))
+            || (request.resource.data.status == 'completed'
+              && request.resource.data.type in ['deposit', 'withdrawal']
+              && requestMatchesAfter(uid, requestId, request.resource.data.type, 'completed', 'transactions'))
+          );
+        allow delete: if false;
       }
 
       match /transactions/{transactionId} {
         allow read: if owns(uid) || isAdmin();
-        allow write: if isAdmin();
+        allow create: if isAdmin()
+          && transactionId == request.resource.data.requestId
+          && request.resource.data.keys().hasAll(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
+          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'method', 'destination', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
+          && request.resource.data.uid == uid
+          && request.resource.data.type in ['deposit', 'withdrawal']
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && accountCurrency(uid, request.resource.data.currency)
+          && request.resource.data.status == 'completed'
+          && request.resource.data.balanceBefore is number
+          && request.resource.data.balanceAfter is number
+          && request.resource.data.balanceAfter >= 0
+          && request.resource.data.completedAt is timestamp
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.processedBy is string
+          && requestMatchesAfter(uid, transactionId, request.resource.data.type, 'completed', 'transactions')
+          && balanceBeforeMatches(uid, request.resource.data.balanceBefore, request.resource.data.currency)
+          && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == request.resource.data.balanceAfter
+          && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency
+          && ((request.resource.data.type == 'deposit'
+              && request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset']
+              && request.resource.data.balanceAfter == request.resource.data.balanceBefore + request.resource.data.amount)
+            || (request.resource.data.type == 'withdrawal'
+              && request.resource.data.get('destination', '') is string
+              && request.resource.data.get('destination', '').size() > 0
+              && request.resource.data.balanceBefore >= request.resource.data.amount
+              && request.resource.data.balanceAfter == request.resource.data.balanceBefore - request.resource.data.amount));
+        allow update, delete: if false;
       }
 
       match /trades/{tradeId} {
         allow read: if owns(uid) || isAdmin();
-        allow write: if isAdmin();
+        allow create: if isAdmin()
+          && tradeId == request.resource.data.requestId
+          && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
+          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy'])
+          && request.resource.data.uid == uid
+          && request.resource.data.type == 'trade'
+          && request.resource.data.marketId is string
+          && request.resource.data.symbol is string
+          && activeMarket(request.resource.data.marketId, request.resource.data.symbol)
+          && request.resource.data.side in ['buy', 'sell']
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && accountCurrency(uid, request.resource.data.currency)
+          && request.resource.data.leverage is number
+          && request.resource.data.leverage >= 1
+          && request.resource.data.leverage <= 10
+          && request.resource.data.entryPrice is number
+          && request.resource.data.entryPrice > 0
+          && request.resource.data.status == 'open'
+          && request.resource.data.openedAt is timestamp
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.processedBy is string
+          && requestMatchesAfter(uid, tradeId, 'trade', 'accepted', 'trades')
+          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.marketId == request.resource.data.marketId
+          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.symbol == request.resource.data.symbol
+          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.side == request.resource.data.side
+          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.amount == request.resource.data.amount
+          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.currency == request.resource.data.currency
+          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.leverage == request.resource.data.leverage;
+        allow update, delete: if false;
       }
 
       match /settings/{settingId} {
@@ -113,7 +246,7 @@ service cloud.firestore {
 
       match /{subcollection}/{documentId} {
         allow read: if owns(uid) || isAdmin();
-        allow write: if isAdmin();
+        allow write: if isAdmin() && !(subcollection in ['requests', 'trades', 'transactions', 'settings']);
       }
     }
 
@@ -128,7 +261,8 @@ service cloud.firestore {
     }
     match /marketAssets/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && id == request.resource.data.symbol && validMarketAsset(request.resource.data);
+      allow delete: if isAdmin();
     }
     match /copyStrategies/{id} {
       allow read: if true;

@@ -18,12 +18,12 @@ The same public configuration is recorded in `.env.example`. Firebase web config
 
 1. Enable **Authentication → Email/Password** and set the production Vercel domain as an authorized domain.
 2. Configure the email verification template and sender in Firebase Authentication.
-3. Enable the Cloud Firestore API and create/confirm the Firestore database in `vertix-36eee`.
-4. Review `firestore.rules` and publish those rules in Firebase before enabling registrations or member data access. Member documents live at `users/{uid}`; administrator documents live separately at `admins/{uid}`. An admin custom claim is required for administrator operations.
+3. Confirm the Cloud Firestore API and database are enabled in `vertix-36eee`.
+4. Review `firestore.rules` and publish its complete contents in Firebase Console → Firestore Database → Rules before enabling account workflows. Vercel deployment does not publish these rules. Member documents live at `users/{uid}`; administrator documents live separately at `admins/{uid}`. An active `admins/{uid}` document and the Firebase Auth `admin` custom claim are both required for administrator operations.
 5. After changing Vercel variables, redeploy so the function receives the new environment.
 
 ## Admin credentials
 
 The uploaded Firebase Admin SDK JSON is a **private service-account key**. It is used only for the one-time administrator provisioning operation and must never be committed, exposed through `/api/firebase-config`, or put in a browser-accessible variable. This application currently needs only the public variables above at runtime. If a future trusted server function needs the Admin SDK, provision a dedicated least-privilege service account and store its credentials as server-only Vercel secrets.
 
-Administrator provisioning is pending because the Cloud Firestore API is disabled in the project. Once Firestore is enabled, create the Auth user and the separate `admins/{uid}` record; do not create a matching member document. Rotate the uploaded service-account key before production and change the admin's initial password after first sign-in.
+The administrator Auth identity and separate `admins/{uid}` record have been provisioned; no matching `users/{uid}` member document was created. Change the initial administrator password after first sign-in, and rotate the uploaded service-account key before production. The browser application does not need that private key at runtime.

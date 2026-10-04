@@ -22,7 +22,8 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  serverTimestamp
+  serverTimestamp,
+  runTransaction
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
 const PUBLIC_COLLECTIONS = new Set([
@@ -236,7 +237,17 @@ export async function listUserRecords(uid, subcollection) {
   const { db: firestore } = await firebaseReady();
   if (!USER_SUBCOLLECTIONS.has(subcollection)) throw new Error('This account collection is not available.');
   const snapshot = await getDocs(collection(firestore, 'users', uid, subcollection));
-  return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  const records = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  if (!['trades', 'transactions'].includes(subcollection)) return records;
+  const unique = new Map();
+  for (const record of records) {
+    const key = record.requestId || record.id;
+    const existing = unique.get(key);
+    const currentTime = record.createdAt?.toMillis?.() || 0;
+    const existingTime = existing?.createdAt?.toMillis?.() || 0;
+    if (!existing || currentTime >= existingTime) unique.set(key, record);
+  }
+  return [...unique.values()];
 }
 
 export async function createUserRequest(uid, type, fields = {}) {
@@ -268,7 +279,7 @@ export async function listAllUserRequests() {
 
 export async function updateUserRequest(uid, requestId, status) {
   const { db: firestore } = await firebaseReady();
-  if (!['submitted', 'processing', 'accepted', 'rejected', 'completed', 'reviewed'].includes(status)) {
+  if (!['processing', 'rejected', 'reviewed'].includes(status)) {
     throw new Error('This request status is not available.');
   }
   await updateDoc(doc(firestore, 'users', uid, 'requests', requestId), {
@@ -277,17 +288,133 @@ export async function updateUserRequest(uid, requestId, status) {
   });
 }
 
+export async function processUserRequest(uid, requestId, { executionPrice, processedBy } = {}) {
+  const { db: firestore } = await firebaseReady();
+  const requestRef = doc(firestore, 'users', uid, 'requests', requestId);
+  const profileRef = doc(firestore, 'users', uid);
+
+  return runTransaction(firestore, async (transaction) => {
+    const snapshot = await transaction.get(requestRef);
+    if (!snapshot.exists()) throw new Error('This request could not be found.');
+    const request = snapshot.data();
+    if (request.resultId) {
+      return { recordId: request.resultId, recordType: request.type === 'trade' ? 'trade' : 'transaction', alreadyProcessed: true };
+    }
+    if (['rejected', 'completed'].includes(request.status)) throw new Error('This request is already closed.');
+
+    const profileSnapshot = await transaction.get(profileRef);
+    if (!profileSnapshot.exists()) throw new Error('The member profile could not be found.');
+    const profile = profileSnapshot.data();
+    const amount = request.amount;
+    const currency = String(request.currency || '');
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || !/^[A-Z]{3}$/.test(currency) || profile.preferredCurrency !== currency) {
+      throw new Error('The request must use a valid amount and the member’s current account currency.');
+    }
+
+    let collectionName;
+    let record;
+    let requestStatus;
+    let balanceAfter;
+    if (request.type === 'trade') {
+      const price = Number(executionPrice);
+      const leverage = request.leverage;
+      if (!request.marketId || !request.symbol || !['buy', 'sell'].includes(request.side)) throw new Error('This trade request is missing its published market or side.');
+      const marketRef = doc(firestore, 'marketAssets', request.marketId);
+      const marketSnapshot = await transaction.get(marketRef);
+      const market = marketSnapshot.exists() ? marketSnapshot.data() : null;
+      if (!market || market.active !== true || market.symbol !== request.symbol) throw new Error('This market listing is no longer active. Re-enable the listing before recording a trade.');
+      if (!Number.isFinite(price) || price <= 0) throw new Error('Enter the actual execution price to record this opened trade.');
+      if (typeof leverage !== 'number' || !Number.isFinite(leverage) || leverage < 1 || leverage > 10) throw new Error('The trade leverage must be between 1x and 10x.');
+      for (const key of ['takeProfit', 'stopLoss']) {
+        if (request[key] != null && (!Number.isFinite(Number(request[key])) || Number(request[key]) < 0)) {
+          throw new Error('The trade request contains an invalid take-profit or stop-loss value.');
+        }
+      }
+      collectionName = 'trades';
+      requestStatus = 'accepted';
+      record = {
+        uid, requestId, marketId: request.marketId, type: 'trade', symbol: String(request.symbol), side: request.side,
+        amount, currency, leverage, duration: String(request.duration || ''),
+        entryPrice: price, status: 'open', openedAt: null,
+        ...(request.takeProfit == null ? {} : { takeProfit: Number(request.takeProfit) }),
+        ...(request.stopLoss == null ? {} : { stopLoss: Number(request.stopLoss) })
+      };
+    } else if (request.type === 'deposit' || request.type === 'withdrawal') {
+      if (request.type === 'deposit' && !['bank_transfer', 'digital_asset'].includes(request.method)) throw new Error('Choose a valid deposit method before recording receipt.');
+      if (request.type === 'withdrawal' && (typeof request.destination !== 'string' || !request.destination.trim())) throw new Error('Add a withdrawal destination before recording payment.');
+      const storedBalance = profile.balance == null ? 0 : profile.balance;
+      const balanceCurrency = profile.balanceCurrency || profile.preferredCurrency;
+      if (typeof storedBalance !== 'number' || !Number.isFinite(storedBalance) || storedBalance < 0) throw new Error('The member balance requires administrator review before this transaction can be posted.');
+      if (storedBalance > 0 && balanceCurrency !== currency) throw new Error('The member balance is recorded in a different currency and must be reconciled first.');
+      if (request.type === 'withdrawal' && amount > storedBalance) throw new Error('The requested withdrawal exceeds the available account balance.');
+      balanceAfter = request.type === 'deposit' ? storedBalance + amount : storedBalance - amount;
+      collectionName = 'transactions';
+      requestStatus = 'completed';
+      record = {
+        uid, requestId, type: request.type, amount, currency, status: 'completed',
+        ...(request.method ? { method: String(request.method) } : {}),
+        ...(request.destination ? { destination: String(request.destination.trim()) } : {}),
+        balanceBefore: storedBalance, balanceAfter, completedAt: null
+      };
+    } else {
+      throw new Error('Only trade, deposit, and withdrawal requests can create account activity records.');
+    }
+
+    const recordRef = doc(firestore, 'users', uid, collectionName, requestId);
+    const existingRecord = await transaction.get(recordRef);
+    if (existingRecord.exists()) throw new Error('An activity record already exists for this request. Contact support before retrying.');
+    const now = serverTimestamp();
+    transaction.set(recordRef, {
+      ...record,
+      ...(request.type === 'trade' ? { openedAt: now } : { completedAt: now }),
+      createdAt: now,
+      processedBy: String(processedBy || '')
+    });
+    if (balanceAfter !== undefined) {
+      transaction.update(profileRef, { balance: balanceAfter, balanceCurrency: currency, balanceUpdatedAt: now, updatedAt: now });
+    }
+    transaction.update(requestRef, {
+      status: requestStatus,
+      resultId: recordRef.id,
+      processedAt: now,
+      updatedAt: now
+    });
+    return { recordId: recordRef.id, recordType: collectionName === 'trades' ? 'trade' : 'transaction', alreadyProcessed: false, balanceAfter, balanceCurrency: balanceAfter === undefined ? undefined : currency };
+  });
+}
+
 export async function createRecord(collectionName, data) {
   const { db: firestore } = await firebaseReady();
   if (!ADMIN_COLLECTIONS.has(collectionName) || collectionName === 'users' || collectionName === 'auditLog') {
     throw new Error('This collection cannot be edited here.');
   }
+  if (collectionName === 'marketAssets') return createMarketAsset(data);
   const ref = await addDoc(collection(firestore, collectionName), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
   return ref.id;
+}
+
+async function createMarketAsset(data) {
+  const { db: firestore } = await firebaseReady();
+  const symbol = String(data.symbol || '').trim().toUpperCase();
+  if (!/^[A-Z0-9][A-Z0-9._:-]{0,39}$/.test(symbol)) {
+    throw new Error('Market symbols must be canonical and may not contain slashes.');
+  }
+  const ref = doc(firestore, 'marketAssets', symbol);
+  await runTransaction(firestore, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists()) throw new Error('That canonical market symbol already exists. Edit its existing listing instead.');
+    transaction.set(ref, {
+      ...data,
+      symbol,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+  });
+  return symbol;
 }
 
 export async function updateRecord(collectionName, id, data) {

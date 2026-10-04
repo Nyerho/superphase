@@ -13,3 +13,5 @@
 .toggle-row{display:grid;grid-template-columns:18px 1fr!important;align-items:center}
 .toggle-row input{width:15px;height:15px;accent-color:var(--vt-accent)}
 @media(max-width:760px){.market-chart-frame{height:420px}}
+
+.form-disclosure{margin:0;padding:11px 13px;border:1px solid rgba(245,196,0,.2);border-radius:10px;background:rgba(245,196,0,.05);color:var(--vt-muted);font-size:11px;line-height:1.65}
