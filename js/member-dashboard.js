@@ -56,7 +56,7 @@ function renderShell() {
         <div class="member-card"><span class="member-avatar" data-member-initials>VT</span><span><b data-member-name>Account holder</b><small>Member account</small></span><i class="online-dot"></i></div>
         <nav class="dashboard-nav" aria-label="Member dashboard">${nav}</nav>
         <div class="sidebar-bottom"><div class="support-glass"><small>SUPPORT</small><p>Contact Vertix Trade support.</p><a href="mailto:hello@vertixtrade.com">Email support ↗</a></div><a class="side-link logout-link" href="${ROOT}login.html" data-logout><span class="side-icon">↩</span>Logout</a></div>
-      </aside>
+        </aside><div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
       <main class="dashboard-main">
         <header class="dashboard-topbar"><button class="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><div class="breadcrumb">ACCOUNT / ${esc(title.toUpperCase())}</div><div class="topbar-actions"><span class="market-open"><i class="online-dot"></i> <span data-account-status>Account</span></span><a class="topbar-icon" href="${ROOT}dashboard/profile.html" aria-label="Profile" data-member-initials>VT</a></div></header>
         <section class="page-intro rise-in"><div><span class="eyebrow"><span class="pulse-dot"></span> VERTIX TRADE / MEMBER SPACE</span><h1>${esc(title)}</h1><p>${esc(description)}</p></div></section>
@@ -68,9 +68,17 @@ function renderShell() {
   const toggle = document.querySelector('.mobile-nav-toggle');
   toggle?.addEventListener('click', () => {
     const sidebar = document.getElementById('dashboard-sidebar');
-    const opened = sidebar.classList.toggle('mobile-open');
+    const scrim = document.getElementById('sidebar-scrim');
+    const opened = sidebar.classList.toggle('open');
+    scrim?.classList.toggle('visible', opened);
+    scrim?.setAttribute('aria-hidden', String(!opened));
     toggle.setAttribute('aria-expanded', String(opened));
+    toggle.setAttribute('aria-label', opened ? 'Close navigation' : 'Open navigation');
   });
+  document.getElementById('sidebar-scrim')?.addEventListener('click', () => toggle?.click());
+  document.querySelectorAll('.dashboard-sidebar .side-link').forEach((link) => link.addEventListener('click', () => {
+    if (window.matchMedia('(max-width: 820px)').matches && sidebarIsOpen()) toggle?.click();
+  }));
   document.addEventListener('click', async (event) => {
     if (!event.target.closest('[data-logout]')) return;
     event.preventDefault();
@@ -78,6 +86,10 @@ function renderShell() {
     await signOutUser();
     window.location.assign(`${ROOT}login.html`);
   });
+}
+
+function sidebarIsOpen() {
+  return document.getElementById('dashboard-sidebar')?.classList.contains('open');
 }
 
 function scheduleRealtimeRender() {

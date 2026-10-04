@@ -109,7 +109,13 @@ function populateCurrencies() {
   }
 }
 
-qs('.mobile-menu')?.addEventListener('click', () => qs('.desktop-nav')?.classList.toggle('mobile-open'));
+qs('.mobile-menu')?.addEventListener('click', () => {
+  const button = qs('.mobile-menu');
+  const nav = qs('.desktop-nav');
+  const opened = nav?.classList.toggle('mobile-open') || false;
+  button?.setAttribute('aria-expanded', String(opened));
+  button?.setAttribute('aria-label', opened ? 'Close navigation' : 'Open navigation');
+});
 populateCurrencies();
 initializeVerificationNotice();
 
