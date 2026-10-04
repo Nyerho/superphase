@@ -224,7 +224,7 @@ async function loadPublicMarkets() {
   const target = qs('#public-market-ticker');
   if (!target) return;
   try {
-    const markets = (await listPublicRecords('marketAssets')).filter((item) => item.active !== false && item.tradingViewSymbol).slice(0, 12);
+    const markets = (await listPublicRecords('marketAssets')).filter((item) => item.active === true && item.tradingViewSymbol).slice(0, 12);
     if (!markets.length) {
       target.textContent = 'No market listings are available.';
       return;

@@ -21,6 +21,7 @@ const money = (value, currency) => {
   catch { return `${number.toLocaleString()} ${currency || ''}`.trim(); }
 };
 const dateText = (value) => value?.toDate ? value.toDate().toLocaleString() : '—';
+const validTradingViewSymbol = (value) => typeof value === 'string' && /^[A-Z0-9][A-Z0-9._:-]*$/i.test(value.trim());
 const panel = (title, body, action = '') => `<section class="dash-panel glass-panel rise-in"><header class="panel-heading"><h2>${title}</h2>${action}</header>${body}</section>`;
 const empty = (text) => `<div class="empty-state">${esc(text)}</div>`;
 const input = (label, name, type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" ${extra}></label>`;
@@ -29,6 +30,8 @@ const fieldSelect = (label, name, options, extra = '') => `<label>${label}<selec
 let session;
 let currency = '';
 let activeMarkets = [];
+let tradingViewPromise;
+let chartCounter = 0;
 
 function renderShell() {
   const [title, description] = pageTitles[pageKey] || pageTitles.overview;
@@ -73,15 +76,17 @@ function renderTable(title, headings, rows) {
 function requestForm(type) {
   if (!currency) return panel('Account currency', `<p class="muted-copy">Select your account currency in settings before submitting an amount request.</p><a class="button button-outline" href="${ROOT}dashboard/account-settings.html">Open Account Settings</a>`);
   if (type === 'trade') {
-    const options = activeMarkets.map((item) => [item.symbol || item.id, `${item.displayName || item.symbol} · ${item.symbol}`]);
+    const options = activeMarkets.map((item) => [item.id, `${item.displayName || item.symbol} · ${item.symbol}`]);
     if (!options.length) return panel('Trade order request', empty('No markets are currently listed.'));
     return panel('Trade order request', `<form method="post" class="standard-form" data-request-form="trade">
-      ${fieldSelect('Market', 'symbol', options, 'required')}
+      ${fieldSelect('Market', 'marketId', options, 'required')}
       ${fieldSelect('Side', 'side', [['buy', 'Buy'], ['sell', 'Sell']], 'required')}
       ${input('Order size', 'amount', 'number', 'min="0.01" step="0.01" required')}
+      ${fieldSelect('Leverage', 'leverage', [['1', '1×'], ['2', '2×'], ['5', '5×'], ['10', '10×']], 'required')}
       ${fieldSelect('Duration', 'duration', [['1h', '1 hour'], ['4h', '4 hours'], ['1d', '1 day']], 'required')}
       <button class="button button-primary" type="submit">Submit order request ↗</button>
-      <p class="form-status" aria-live="polite">Requests are recorded in your account with a submitted status.</p>
+      <p class="form-disclosure">This submits an order request, not an executed trade. An open trade is recorded only after external execution is confirmed by an administrator.</p>
+      <p class="form-status" aria-live="polite"></p>
     </form>`);
   }
 
@@ -93,7 +98,8 @@ function requestForm(type) {
       ? fieldSelect('Funding method', 'method', [['bank_transfer', 'Bank transfer'], ['digital_asset', 'Digital asset']], 'required')
       : input('Saved destination reference', 'destination', 'text', 'maxlength="100" required')}
     <button class="button button-primary" type="submit">Submit ${isDeposit ? 'deposit' : 'withdrawal'} request ↗</button>
-    <p class="form-status" aria-live="polite">Your request will be recorded in your account for review.</p>
+    <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'This request does not send funds. An administrator records it only after the external withdrawal is sent.'}</p>
+    <p class="form-status" aria-live="polite"></p>
   </form>`;
   return panel(labels, form);
 }
@@ -103,7 +109,7 @@ async function renderPage() {
   const uid = session.user.uid;
   const profile = session.profile;
   currency = profile.preferredCurrency || '';
-  activeMarkets = (await listPublicRecords('marketAssets')).filter((item) => item.active !== false);
+  activeMarkets = (await listPublicRecords('marketAssets')).filter((item) => item.active === true);
   const [requests, trades, transactions] = await Promise.all([
     listUserRecords(uid, 'requests'),
     listUserRecords(uid, 'trades'),
@@ -119,12 +125,15 @@ async function renderPage() {
   } else if (pageKey === 'trade') {
     const mine = userRequests.filter((item) => item.type === 'trade');
     const rows = mine.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
-    content.innerHTML = `<div class="content-grid"><div>${requestForm('trade')}${renderTable('Order requests', ['Market', 'Side', 'Size', 'Status', 'Submitted'], rows)}</div><aside>${panel('Account balance', `<strong class="large-value">${esc(profile.balance == null ? '—' : money(profile.balance, currency))}</strong><p class="muted-copy">${esc(currency)}</p>`)}</aside></div>`;
+    const balanceCurrency = profile.balanceCurrency || currency;
+    const accountBalance = profile.balance == null || (balanceCurrency !== currency && profile.balance !== 0) ? '—' : money(profile.balance, currency);
+    content.innerHTML = `<div class="content-grid"><div>${requestForm('trade')}${renderTable('Order requests', ['Market', 'Side', 'Size', 'Status', 'Submitted'], rows)}</div><aside>${panel('Account balance', `<strong class="large-value">${esc(accountBalance)}</strong><p class="muted-copy">${esc(currency)}</p>`)}</aside></div>`;
   } else if (pageKey === 'tradinghistory') {
     const rows = trades.slice().sort(byTime).map((item) => `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
     content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Status', 'Date'], rows);
   } else if (pageKey === 'accounthistory') {
-    const rows = [...transactions, ...userRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
+    const outstandingRequests = userRequests.filter((item) => !item.resultId);
+    const rows = [...transactions, ...outstandingRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.completedAt || item.createdAt))}</td></tr>`);
     content.innerHTML = renderTable('Transactions', ['Type', 'Details', 'Amount', 'Status', 'Date'], rows);
   } else if (pageKey === 'copy-trading') {
     const strategies = await listPublicRecords('copyStrategies');
@@ -173,7 +182,7 @@ async function renderPage() {
     const analysis = signals.filter((item) => item.technicalSummary || item.analysis);
     content.innerHTML = analysis.length ? `<div class="feature-grid">${analysis.map((item) => `<article class="indicator-card glass-panel rise-in"><span class="content-label">${esc(item.pair || item.asset || '')}</span><h2>${esc(item.title || 'Technical analysis')}</h2><strong>${esc(item.direction || '')}</strong><p>${esc(item.technicalSummary || item.analysis)}</p></article>`).join('')}</div>` : empty('No technical analysis has been published.');
   } else if (pageKey === 'chart') {
-    const marketOptions = activeMarkets.filter((item) => item.tradingViewSymbol);
+    const marketOptions = activeMarkets.filter((item) => validTradingViewSymbol(item.tradingViewSymbol));
     const select = `<label>Market<select id="chart-market">${marketOptions.map((item) => `<option value="${esc(item.tradingViewSymbol)}">${esc(item.displayName || item.symbol)}</option>`).join('')}</select></label>`;
     content.innerHTML = marketOptions.length ? `${panel('Live market chart', `${select}<div id="member-tradingview-chart" class="market-chart-frame"></div>`)}<p class="inline-note">Market chart data is provided by TradingView.</p>` : empty('No chart-enabled markets are listed.');
     if (marketOptions.length) mountTradingViewChart(marketOptions[0].tradingViewSymbol, 'member-tradingview-chart');
@@ -191,16 +200,39 @@ async function renderPage() {
 
 function mountTradingViewChart(symbol, targetId) {
   const target = document.getElementById(targetId);
-  if (!target || !/^[A-Z0-9:_-]+$/i.test(symbol || '')) return;
+  if (!target) return;
+  if (!validTradingViewSymbol(symbol)) {
+    target.textContent = 'This listing has an invalid chart symbol.';
+    return;
+  }
+  const selectedSymbol = symbol.trim();
+  target.dataset.chartSymbol = selectedSymbol;
   target.replaceChildren();
-  const script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/tv.js';
-  script.onload = () => {
-    if (window.TradingView?.widget) {
-      new window.TradingView.widget({ autosize: true, symbol, interval: '60', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en', container_id: targetId });
+  target.setAttribute('aria-busy', 'true');
+  const load = () => {
+    if (window.TradingView?.widget) return Promise.resolve();
+    if (!tradingViewPromise) {
+      tradingViewPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://s3.tradingview.com/tv.js';
+        script.async = true;
+        script.onload = () => window.TradingView?.widget ? resolve() : reject(new Error('Chart service unavailable'));
+        script.onerror = () => reject(new Error('Chart service unavailable'));
+        document.head.append(script);
+      });
     }
+    return tradingViewPromise;
   };
-  target.append(script);
+  load().then(() => {
+    if (target.dataset.chartSymbol !== selectedSymbol) return;
+    const mount = document.createElement('div');
+    mount.id = `vt-member-chart-${++chartCounter}`;
+    mount.className = 'market-chart-embed-inner';
+    target.append(mount);
+    new window.TradingView.widget({ autosize: true, symbol: selectedSymbol, interval: 'D', timezone: 'Etc/UTC', theme: 'dark', style: '1', locale: 'en', withdateranges: true, allow_symbol_change: false, save_image: false, container_id: mount.id });
+  }).catch(() => {
+    target.textContent = 'The chart service is temporarily unavailable. Refresh to try again.';
+  }).finally(() => target.removeAttribute('aria-busy'));
 }
 
 function bindForms() {
@@ -210,8 +242,16 @@ function bindForms() {
       const data = new FormData(form);
       const type = form.dataset.requestForm;
       const fields = { currency };
-      for (const key of ['amount', 'symbol', 'side', 'duration', 'method', 'destination', 'purpose', 'message']) {
-        if (data.has(key)) fields[key] = key === 'amount' ? Number(data.get(key)) : String(data.get(key)).trim();
+      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'purpose', 'message']) {
+        if (data.has(key)) fields[key] = ['amount', 'leverage'].includes(key) ? Number(data.get(key)) : String(data.get(key)).trim();
+      }
+      if (type === 'trade') {
+        const market = activeMarkets.find((item) => item.id === fields.marketId && item.active === true);
+        if (!market?.symbol) {
+          setFormStatus(form, 'Select an active market listing.');
+          return;
+        }
+        fields.symbol = market.symbol;
       }
       if (type !== 'support' && !currency) {
         setFormStatus(form, 'Select an account currency in Account Settings before submitting an amount request.');
@@ -223,6 +263,10 @@ function bindForms() {
       }
       if (fields.amount !== undefined && (!Number.isFinite(fields.amount) || fields.amount <= 0)) {
         setFormStatus(form, 'Enter an amount greater than zero.');
+        return;
+      }
+      if (type === 'trade' && (!Number.isFinite(fields.leverage) || fields.leverage < 1 || fields.leverage > 10)) {
+        setFormStatus(form, 'Select leverage between 1× and 10×.');
         return;
       }
       const button = form.querySelector('button[type="submit"]');
