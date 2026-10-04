@@ -57,15 +57,15 @@ function releaseOperationButton() {
   }
 }
 
-function lockOperationButton(button) {
+function lockOperationButton(button, timeoutMs = 20000) {
   if (!button || activeOperationButton) return;
   activeOperationButton = button;
   button.disabled = true;
   button.setAttribute('aria-busy', 'true');
   operationTimeout = setTimeout(() => {
     releaseOperationButton();
-    showOperation('The operation timed out. Check your connection and try again.', 'error');
-  }, 20000);
+    showOperation(`The operation timed out after ${Math.round(timeoutMs / 1000)} seconds. Check your connection and try again.`, 'error');
+  }, timeoutMs);
 }
 
 function status(message, tone = 'error') {
@@ -100,25 +100,23 @@ async function backfillAuditHistory() {
   const known = new Set(existing.map((item) => item.action).filter(Boolean));
   const users = (await listRecords('users')).filter((item) => (item.uid || item.id) !== SYSTEM_ADMIN_UID);
   const sources = ['requests', 'trades', 'transactions'];
-  let created = 0;
+  const pending = [];
+  const queue = (marker, text) => {
+    if (!known.has(marker)) {
+      known.add(marker);
+      pending.push({ marker, text });
+    }
+  };
   for (const user of users) {
     const uid = user.uid || user.id;
     const profileMarker = `[historical:profiles/${uid}/${uid}]`;
-    if (!known.has(profileMarker)) {
-      await recordAdminAudit(profileMarker, 'success', { text: `Historical reconstruction · member profile · ${user.email || uid} · original timestamp: ${timeText(user.createdAt || user.updatedAt)}` });
-      known.add(profileMarker);
-      created += 1;
-    }
+    queue(profileMarker, `Historical reconstruction · member profile · ${user.email || uid} · original timestamp: ${timeText(user.createdAt || user.updatedAt)}`);
     for (const source of sources) {
       let records = [];
       try { records = await listUserRecords(uid, source); } catch (error) { console.warn(`Could not reconstruct ${source} for ${uid}`, error); }
       for (const record of records) {
         const marker = `[historical:${source}/${uid}/${record.id}]`;
-        if (known.has(marker)) continue;
-        const originalTime = timeText(record.createdAt || record.updatedAt);
-        await recordAdminAudit(marker, 'success', { text: `Historical reconstruction · ${source} · member ${user.email || uid} · original timestamp: ${originalTime}` });
-        known.add(marker);
-        created += 1;
+        queue(marker, `Historical reconstruction · ${source} · member ${user.email || uid} · original timestamp: ${timeText(record.createdAt || record.updatedAt)}`);
       }
     }
   }
@@ -127,13 +125,13 @@ async function backfillAuditHistory() {
     try { records = await listRecords(collectionName); } catch (error) { console.warn(`Could not reconstruct ${collectionName}`, error); }
     for (const record of records) {
       const marker = `[historical:${collectionName}/${record.id}]`;
-      if (known.has(marker)) continue;
-      await recordAdminAudit(marker, 'success', { text: `Historical reconstruction · ${collectionName} · original timestamp: ${timeText(record.createdAt || record.updatedAt)}` });
-      known.add(marker);
-      created += 1;
+      queue(marker, `Historical reconstruction · ${collectionName} · original timestamp: ${timeText(record.createdAt || record.updatedAt)}`);
     }
   }
-  return created;
+  for (let index = 0; index < pending.length; index += 10) {
+    await Promise.all(pending.slice(index, index + 10).map(({ marker, text }) => recordAdminAudit(marker, 'success', { text })));
+  }
+  return pending.length;
 }
 
 function empty(text) {
@@ -356,7 +354,7 @@ async function start() {
   qs('#admin-operation-close')?.addEventListener('click', () => { qs('#admin-operation-modal').hidden = true; });
   qs('#refresh-history')?.addEventListener('click', () => renderAuditHistory());
   qs('#backfill-history')?.addEventListener('click', async (event) => {
-    lockOperationButton(event.currentTarget);
+    lockOperationButton(event.currentTarget, 300000);
     try {
       const created = await backfillAuditHistory();
       status(`Historical reconstruction complete: ${created} record${created === 1 ? '' : 's'} added.`, 'success');
