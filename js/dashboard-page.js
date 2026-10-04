@@ -18,6 +18,17 @@ const money = (value, currency) => {
 const timeText = (value) => value?.toDate ? value.toDate().toLocaleString() : '—';
 const timeValue = (value) => value?.toMillis ? value.toMillis() : (value?.seconds || 0) * 1000;
 const validTradingViewSymbol = (value) => typeof value === 'string' && /^[A-Z0-9][A-Z0-9._:-]*$/i.test(value.trim());
+const DEFAULT_MARKETS = [
+  { id: 'default-btcusdt', assetType: 'Crypto', symbol: 'BTC/USDT', displayName: 'Bitcoin', tradingViewSymbol: 'BINANCE:BTCUSDT', active: true },
+  { id: 'default-ethusdt', assetType: 'Crypto', symbol: 'ETH/USDT', displayName: 'Ethereum', tradingViewSymbol: 'BINANCE:ETHUSDT', active: true },
+  { id: 'default-solusdt', assetType: 'Crypto', symbol: 'SOL/USDT', displayName: 'Solana', tradingViewSymbol: 'BINANCE:SOLUSDT', active: true },
+  { id: 'default-bnbusdt', assetType: 'Crypto', symbol: 'BNB/USDT', displayName: 'BNB', tradingViewSymbol: 'BINANCE:BNBUSDT', active: true },
+  { id: 'default-amzn', assetType: 'Stock', symbol: 'AMZN', displayName: 'Amazon', tradingViewSymbol: 'NASDAQ:AMZN', active: true },
+  { id: 'default-aapl', assetType: 'Stock', symbol: 'AAPL', displayName: 'Apple', tradingViewSymbol: 'NASDAQ:AAPL', active: true },
+  { id: 'default-msft', assetType: 'Stock', symbol: 'MSFT', displayName: 'Microsoft', tradingViewSymbol: 'NASDAQ:MSFT', active: true },
+  { id: 'default-nvda', assetType: 'Stock', symbol: 'NVDA', displayName: 'NVIDIA', tradingViewSymbol: 'NASDAQ:NVDA', active: true },
+  { id: 'default-tsla', assetType: 'Stock', symbol: 'TSLA', displayName: 'Tesla', tradingViewSymbol: 'NASDAQ:TSLA', active: true }
+];
 
 let tradingViewPromise;
 let chartCounter = 0;
@@ -262,7 +273,8 @@ async function start() {
     tradeForm.parentElement.insertBefore(note, tradeForm);
   }
 
-  const activeMarkets = markets.filter((item) => item.active === true).slice().sort((a, b) => String(a.displayName || a.symbol || '').localeCompare(String(b.displayName || b.symbol || '')));
+  const marketSource = markets.some((item) => item.active === true) ? markets : DEFAULT_MARKETS;
+  const activeMarkets = marketSource.filter((item) => item.active === true).slice().sort((a, b) => String(a.displayName || a.symbol || '').localeCompare(String(b.displayName || b.symbol || '')));
   const chartMarkets = activeMarkets.filter((item) => validTradingViewSymbol(item.tradingViewSymbol));
   const typeSelect = document.getElementById('asset_type');
   const marketSelect = document.getElementById('market-select');
