@@ -98,8 +98,8 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow get: if owns(uid) || isAdmin();
-      allow list: if isAdmin();
+      allow get: if owns(uid) || isAdmin() || systemAdminIdentity();
+      allow list: if isAdmin() || systemAdminIdentity();
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
@@ -157,7 +157,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /requests/{requestId} {
-        allow read: if owns(uid) || isAdmin();
+        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
         allow create: if owns(uid)
           && request.resource.data.uid == uid
           && request.resource.data.status == 'submitted'
@@ -204,7 +204,7 @@ service cloud.firestore {
       }
 
       match /transactions/{transactionId} {
-        allow read: if owns(uid) || isAdmin();
+        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
         allow create: if isAdmin()
           && transactionId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
@@ -238,8 +238,8 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-    match /trades/{tradeId} {
-        allow read: if owns(uid) || isAdmin();
+      match /trades/{tradeId} {
+        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
       allow create: if isAdmin()
           && tradeId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
@@ -300,14 +300,14 @@ service cloud.firestore {
       }
 
       match /settings/{settingId} {
-        allow read: if owns(uid) || isAdmin();
+        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
         allow create, update: if owns(uid)
           && request.resource.data.keys().hasOnly(['reduceMotion', 'updatedAt']);
         allow delete: if false;
       }
 
       match /{subcollection}/{documentId} {
-        allow read: if owns(uid) || isAdmin();
+        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
         allow write: if isAdmin() && !(subcollection in ['requests', 'trades', 'transactions', 'settings']);
       }
     }
@@ -354,11 +354,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /fundingMethods/{id} {
-      allow read: if verified() || isAdmin();
+      allow read: if verified() || isAdmin() || systemAdminIdentity();
       allow create, update, delete: if isAdmin();
     }
     match /platformSettings/{id} {
-      allow read: if verified() || isAdmin();
+      allow read: if verified() || isAdmin() || systemAdminIdentity();
       allow create, update, delete: if isAdmin();
     }
     match /auditLog/{id} {

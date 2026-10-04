@@ -118,15 +118,15 @@ function ensureStarterSeed() {
 async function render() {
   ensureStarterSeed();
   const errors = [];
-  const safe = (loader, fallback) => loader().catch((error) => { errors.push(error); return fallback; });
+  const safe = (name, loader, fallback) => loader().catch((error) => { errors.push(name); console.error(`[Vertix Admin] ${name} failed`, error); return fallback; });
   const [users, signals, assets, fundingMethods, plans, digitalAssets, requests] = await Promise.all([
-    safe(() => listRecords('users'), []),
-    safe(() => listRecords('signals'), starterRecords('signals')),
-    safe(() => listRecords('marketAssets'), starterRecords('marketAssets')),
-    safe(() => listRecords('fundingMethods'), []),
-    safe(() => listRecords('plans'), starterRecords('plans')),
-    safe(() => listRecords('digitalAssets'), starterRecords('digitalAssets')),
-    safe(() => listAllUserRequests(), [])
+    safe('users', () => listRecords('users'), []),
+    safe('signals', () => listRecords('signals'), starterRecords('signals')),
+    safe('marketAssets', () => listRecords('marketAssets'), starterRecords('marketAssets')),
+    safe('fundingMethods', () => listRecords('fundingMethods'), []),
+    safe('plans', () => listRecords('plans'), starterRecords('plans')),
+    safe('digitalAssets', () => listRecords('digitalAssets'), starterRecords('digitalAssets')),
+    safe('member requests', () => listAllUserRequests(), [])
   ]);
   const members = users.filter((item) => (item.uid || item.id) !== SYSTEM_ADMIN_UID);
   catalogCache.plans = plans;
@@ -170,7 +170,7 @@ async function render() {
       ${requestActions(item)}
     </article>`;
   }).join('') : empty('No member requests have been submitted.');
-  if (errors.length) status('Some Admin data could not be read. Publish the latest firestore.rules and check the browser console for the affected section.', 'error');
+  if (errors.length) status(`Could not read: ${errors.join(', ')}. Publish the latest firestore.rules if these are permission errors.`, 'error');
 }
 
 async function removeRecord(collectionName, id) {
