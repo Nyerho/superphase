@@ -26,10 +26,30 @@ function errorMessage(error) {
     'auth/invalid-credential': 'The email address or password is incorrect.',
     'auth/user-disabled': 'This account is disabled. Contact Vertix Trade support.',
     'auth/network-request-failed': 'A network error occurred. Check your connection and try again.',
+    'auth/unauthorized-continue-uri': 'Firebase rejected this site as the verification-link return address. Contact Vertix Trade support.',
+    'auth/unauthorized-domain': 'This site is not authorized for Firebase verification links. Contact Vertix Trade support.',
+    'auth/invalid-continue-uri': 'The verification-link return address is invalid. Contact Vertix Trade support.',
+    'auth/too-many-requests': 'Too many verification attempts were made. Wait a few minutes, then try again.',
+    'auth/quota-exceeded': 'Email delivery is temporarily limited. Try again later.',
+    'auth/operation-not-allowed': 'Email verification is not available right now. Contact Vertix Trade support.',
     'permission-denied': 'Your account could not be saved. Contact Vertix Trade support.',
     'unavailable': 'Account services are temporarily unavailable. Try again shortly.'
   };
   return messages[error?.code] || error?.message || 'The request could not be completed. Try again.';
+}
+
+function initializeVerificationNotice() {
+  const status = qs('[data-verification-status]');
+  if (!status) return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('send') === 'sent') {
+    status.textContent = 'A verification email was sent. Check your inbox and spam folder.';
+  } else if (params.get('send') === 'failed') {
+    const reason = errorMessage({ code: params.get('reason') });
+    status.textContent = `Your account was created, but the verification email could not be sent. ${reason} Use the button below to retry.`;
+  } else if (params.get('send') === 'pending') {
+    status.textContent = 'This account is not verified yet. Open the latest verification email or resend the link below.';
+  }
 }
 
 function populateCurrencies() {
@@ -54,6 +74,7 @@ function populateCurrencies() {
 
 qs('.mobile-menu')?.addEventListener('click', () => qs('.desktop-nav')?.classList.toggle('mobile-open'));
 populateCurrencies();
+initializeVerificationNotice();
 
 globalThis.addEventListener?.('click', async (event) => {
   if (!event.target.closest('[data-logout]')) return;
@@ -84,9 +105,16 @@ document.addEventListener('click', async (event) => {
 
   if (event.target.closest('[data-check-verification]')) {
     event.preventDefault();
-    const user = await refreshAuthUser();
-    if (user?.emailVerified) window.location.assign('/user-dashboard.html');
-    else if (qs('[data-verification-status]')) qs('[data-verification-status]').textContent = 'Email verification is still pending.';
+    try {
+      const user = await refreshAuthUser();
+      if (user?.emailVerified) {
+        window.location.assign((await hasAdminClaim(user, true)) ? '/admin.html' : '/user-dashboard.html');
+      } else if (qs('[data-verification-status]')) {
+        qs('[data-verification-status]').textContent = 'Email verification is still pending. Open the latest verification email, then try again.';
+      }
+    } catch (error) {
+      if (qs('[data-verification-status]')) qs('[data-verification-status]').textContent = errorMessage(error);
+    }
   }
 });
 
@@ -137,11 +165,12 @@ qs('#register-form')?.addEventListener('submit', async (event) => {
 
   try {
     const result = await registerUser(String(data.get('email') || ''), password, profile);
-    if (result.verificationSent) window.location.assign('/verify-email.html');
-    else {
-      setStatus(form, 'Your account was created. Sign in to request a verification email.', 'success');
-      button.disabled = false;
+    const verificationUrl = new URL('/verify-email.html', window.location.origin);
+    verificationUrl.searchParams.set('send', result.verificationSent ? 'sent' : 'failed');
+    if (!result.verificationSent && result.verificationErrorCode) {
+      verificationUrl.searchParams.set('reason', result.verificationErrorCode);
     }
+    window.location.assign(verificationUrl.href);
   } catch (error) {
     setStatus(form, errorMessage(error));
     button.disabled = false;
@@ -157,7 +186,7 @@ qs('#login-form')?.addEventListener('submit', async (event) => {
   try {
     const credential = await loginUser(qs('[name="email"]', form).value, qs('[name="password"]', form).value);
     if (!credential.user.emailVerified) {
-      window.location.assign('/verify-email.html');
+      window.location.assign('/verify-email.html?send=pending');
       return;
     }
     window.location.assign((await hasAdminClaim(credential.user, true)) ? '/admin.html' : '/user-dashboard.html');
