@@ -24,6 +24,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  Timestamp,
   runTransaction
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 
@@ -371,6 +372,56 @@ export async function openTrade(uid, fields = {}) {
     transaction.update(profileRef, { balance: balance - amount, balanceCurrency: String(fields.currency), balanceUpdatedAt: now, updatedAt: now });
     return { recordId: tradeRef.id, balanceAfter: balance - amount };
   });
+}
+
+export async function setMemberBalance(uid, balance, currency) {
+  const { db: firestore } = await firebaseReady();
+  const amount = Number(balance);
+  if (!Number.isFinite(amount) || amount < 0 || !/^[A-Z]{3}$/.test(String(currency))) throw new Error('Enter a valid non-negative balance and currency.');
+  await updateDoc(doc(firestore, 'users', uid), { balance: amount, balanceCurrency: String(currency), balanceUpdatedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+}
+
+export async function addManualTrade(uid, fields = {}) {
+  const { db: firestore } = await firebaseReady();
+  const amount = Number(fields.amount);
+  const entryPrice = Number(fields.entryPrice);
+  const at = fields.at instanceof Date ? Timestamp.fromDate(fields.at) : Timestamp.now();
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(entryPrice) || entryPrice <= 0) throw new Error('Enter a valid trade amount and entry price.');
+  if (!['buy', 'sell'].includes(fields.side) || !/^[A-Z]{3}$/.test(String(fields.currency))) throw new Error('Enter a valid side and currency.');
+  const tradeRef = doc(collection(firestore, 'users', uid, 'trades'));
+  await runTransaction(firestore, async (transaction) => {
+    transaction.set(tradeRef, {
+      uid, requestId: tradeRef.id, marketId: String(fields.marketId), type: 'trade', symbol: String(fields.symbol), side: fields.side,
+      amount, currency: String(fields.currency), leverage: Number(fields.leverage || 1), duration: String(fields.duration || ''),
+      entryPrice, status: 'open', openedAt: at, createdAt: at, processedBy: 'admin-manual', manual: true,
+      ...(fields.takeProfit ? { takeProfit: Number(fields.takeProfit) } : {}), ...(fields.stopLoss ? { stopLoss: Number(fields.stopLoss) } : {})
+    });
+  });
+  return tradeRef.id;
+}
+
+export async function addManualTransaction(uid, fields = {}) {
+  const { db: firestore } = await firebaseReady();
+  const amount = Number(fields.amount);
+  const currency = String(fields.currency || '');
+  const type = String(fields.type || '');
+  const at = fields.at instanceof Date ? Timestamp.fromDate(fields.at) : Timestamp.now();
+  if (!['deposit', 'withdrawal'].includes(type) || !Number.isFinite(amount) || amount <= 0 || !/^[A-Z]{3}$/.test(currency)) throw new Error('Enter a valid transaction type, amount and currency.');
+  const transactionRef = doc(collection(firestore, 'users', uid, 'transactions'));
+  const profileRef = doc(firestore, 'users', uid);
+  await runTransaction(firestore, async (transaction) => {
+    const profileSnapshot = await transaction.get(profileRef);
+    if (!profileSnapshot.exists()) throw new Error('The member profile could not be found.');
+    const profile = profileSnapshot.data();
+    const before = Number(profile.balance || 0);
+    const balanceCurrency = profile.balanceCurrency || profile.preferredCurrency;
+    if (balanceCurrency !== currency && before !== 0) throw new Error('The member balance uses a different currency. Reconcile it before posting this transaction.');
+    const after = type === 'deposit' ? before + amount : before - amount;
+    if (after < 0) throw new Error('The withdrawal exceeds the member balance.');
+    transaction.set(transactionRef, { uid, requestId: transactionRef.id, type, amount, currency, status: 'completed', ...(fields.method ? { method: String(fields.method) } : {}), ...(fields.destination ? { destination: String(fields.destination) } : {}), balanceBefore: before, balanceAfter: after, completedAt: at, createdAt: at, processedBy: 'admin-manual', manual: true });
+    transaction.update(profileRef, { balance: after, balanceCurrency: currency, balanceUpdatedAt: at, updatedAt: serverTimestamp() });
+  });
+  return transactionRef.id;
 }
 
 export async function processUserRequest(uid, requestId, { executionPrice, processedBy } = {}) {

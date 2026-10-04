@@ -12,6 +12,9 @@ import {
   saveFundingMethod,
   getPlatformSettings,
   savePlatformSettings,
+  setMemberBalance,
+  addManualTrade,
+  addManualTransaction,
   updateMemberKyc
 } from './firebase.js';
 
@@ -143,6 +146,9 @@ async function render() {
       <span>${label(item.preferredCurrency)}</span>
       <span class="status-pill">${label(item.accountStatus)}</span><span class="status-pill">KYC: ${label(item.kycStatus || 'not_started')}</span><div class="crud-actions"><button type="button" data-kyc-status="verified" data-uid="${esc(item.uid || item.id)}">Verify KYC</button><button type="button" data-kyc-status="not_started" data-uid="${esc(item.uid || item.id)}">Reset KYC</button></div>
     </div>`).join('') : empty('No member accounts are available.');
+  const memberSelect = qs('#ledger-member');
+  memberSelect.innerHTML = `<option value="">Select a member</option>${users.map((item) => `<option value="${esc(item.uid || item.id)}">${label(item.legalName || item.email)} · ${label(item.email)}</option>`).join('')}`;
+  qs('#ledger-market').innerHTML = `<option value="">Select a market</option>${assets.filter((item) => item.active === true).map((item) => `<option value="${esc(item.id)}" data-symbol="${esc(item.symbol)}">${label(item.displayName)} · ${label(item.symbol)}</option>`).join('')}`;
 
   const latestRequests = requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 20);
   const requestProfiles = await Promise.all(latestRequests.map((item) => getUserProfile(item.uid).catch(() => null)));
@@ -203,6 +209,18 @@ function fillCatalogForm(collectionName, record) {
     if (form.elements.namedItem(field)) form.elements.namedItem(field).value = record[field] ?? '';
   }
   form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function ledgerMemberId() {
+  const uid = qs('#ledger-member')?.value;
+  if (!uid) throw new Error('Select a member first.');
+  return uid;
+}
+
+function ledgerDate(value) {
+  const date = new Date(String(value || ''));
+  if (Number.isNaN(date.getTime()) || date > new Date()) throw new Error('Enter a valid past or current effective date and time.');
+  return date;
 }
 
 async function start() {
@@ -303,6 +321,43 @@ async function start() {
       status(error.message || 'Catalog record could not be saved.');
     }
   }));
+
+  qs('#balance-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uid = ledgerMemberId();
+      const data = new FormData(event.currentTarget);
+      await setMemberBalance(uid, Number(data.get('balance')), String(data.get('currency') || '').trim().toUpperCase());
+      status('Member balance updated.', 'success');
+      await render();
+    } catch (error) { status(error.message || 'Member balance could not be updated.'); }
+  });
+
+  qs('#ledger-transaction-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uid = ledgerMemberId();
+      const data = new FormData(event.currentTarget);
+      const type = String(data.get('type'));
+      const details = String(data.get('details') || '').trim();
+      await addManualTransaction(uid, { type, amount: Number(data.get('amount')), currency: String(data.get('currency') || '').trim().toUpperCase(), method: type === 'deposit' ? 'manual' : '', destination: type === 'withdrawal' ? (details || 'admin-manual') : '', at: ledgerDate(data.get('at')) });
+      status('Backdated transaction added and balance adjusted atomically.', 'success');
+      await render();
+    } catch (error) { status(error.message || 'Transaction could not be added.'); }
+  });
+
+  qs('#ledger-trade-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uid = ledgerMemberId();
+      const data = new FormData(event.currentTarget);
+      const market = qs('#ledger-market').selectedOptions[0];
+      if (!market?.dataset.symbol) throw new Error('Select a market first.');
+      await addManualTrade(uid, { marketId: data.get('marketId'), symbol: market.dataset.symbol, side: data.get('side'), amount: Number(data.get('amount')), entryPrice: Number(data.get('entryPrice')), leverage: Number(data.get('leverage')), currency: String(data.get('currency') || '').trim().toUpperCase(), at: ledgerDate(data.get('at')) });
+      status('Backdated trade history added.', 'success');
+      await render();
+    } catch (error) { status(error.message || 'Trade history could not be added.'); }
+  });
 
   document.addEventListener('submit', async (event) => {
     const editForm = event.target.closest('[data-market-edit]');

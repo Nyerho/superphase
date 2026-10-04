@@ -203,7 +203,7 @@ service cloud.firestore {
         allow create: if isAdmin()
           && transactionId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
-          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'method', 'destination', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
+          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'method', 'destination', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy', 'manual'])
           && request.resource.data.uid == uid
           && request.resource.data.type in ['deposit', 'withdrawal']
           && request.resource.data.amount is number
@@ -216,12 +216,14 @@ service cloud.firestore {
           && request.resource.data.completedAt is timestamp
           && request.resource.data.createdAt is timestamp
           && request.resource.data.processedBy is string
-          && requestMatchesAfter(uid, transactionId, request.resource.data.type, 'completed', 'transactions')
+          && (requestMatchesAfter(uid, transactionId, request.resource.data.type, 'completed', 'transactions')
+            || (request.resource.data.manual == true && request.resource.data.processedBy == 'admin-manual'))
           && balanceBeforeMatches(uid, request.resource.data.balanceBefore, request.resource.data.currency)
           && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == request.resource.data.balanceAfter
           && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency
           && ((request.resource.data.type == 'deposit'
-              && request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment']
+              && (request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment']
+                || (request.resource.data.manual == true && request.resource.data.get('method', '') == 'manual'))
               && request.resource.data.balanceAfter == request.resource.data.balanceBefore + request.resource.data.amount)
             || (request.resource.data.type == 'withdrawal'
               && request.resource.data.get('destination', '') is string
@@ -236,7 +238,7 @@ service cloud.firestore {
       allow create: if isAdmin()
           && tradeId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
-          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy'])
+          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy', 'manual'])
           && request.resource.data.uid == uid
           && request.resource.data.type == 'trade'
           && request.resource.data.marketId is string
@@ -255,16 +257,17 @@ service cloud.firestore {
           && request.resource.data.openedAt is timestamp
           && request.resource.data.createdAt is timestamp
           && request.resource.data.processedBy is string
-          && requestMatchesAfter(uid, tradeId, 'trade', 'accepted', 'trades')
-          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.marketId == request.resource.data.marketId
-          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.symbol == request.resource.data.symbol
-          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.side == request.resource.data.side
-          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.amount == request.resource.data.amount
-          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.currency == request.resource.data.currency
-          && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.leverage == request.resource.data.leverage;
+          && ((requestMatchesAfter(uid, tradeId, 'trade', 'accepted', 'trades')
+            && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.marketId == request.resource.data.marketId
+            && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.symbol == request.resource.data.symbol
+            && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.side == request.resource.data.side
+            && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.amount == request.resource.data.amount
+            && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.currency == request.resource.data.currency
+            && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.leverage == request.resource.data.leverage)
+            || (request.resource.data.manual == true && request.resource.data.processedBy == 'admin-manual'));
       allow create: if owns(uid)
         && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
-        && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy'])
+        && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy', 'manual'])
         && request.resource.data.uid == uid
         && request.resource.data.requestId == tradeId
         && request.resource.data.type == 'trade'
