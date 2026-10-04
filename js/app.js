@@ -223,7 +223,7 @@ qs('#login-form')?.addEventListener('submit', async (event) => {
   setStatus(form, 'Signing in…', 'success');
   try {
     const credential = await loginUser(qs('[name="email"]', form).value, qs('[name="password"]', form).value);
-    if (!credential.user.emailVerified) {
+    if (!credential.user.emailVerified && !isSystemAdminAccount(credential.user)) {
       window.location.assign('/verify-email.html?send=pending');
       return;
     }

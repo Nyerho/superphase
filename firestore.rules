@@ -10,14 +10,13 @@ service cloud.firestore {
     }
 
     function systemAdminIdentity() {
-      return verified()
+      return signedIn()
         && request.auth.uid == 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2'
         && request.auth.token.get('email', '') == 'admin@vertixtrades.com';
     }
 
     function isAdmin() {
-      return verified()
-        && (request.auth.token.get('admin', false) == true || systemAdminIdentity())
+      return (verified() && request.auth.token.get('admin', false) == true || systemAdminIdentity())
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
@@ -314,7 +313,8 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      allow get, list: if isAdmin();
+      allow get: if isAdmin() || (systemAdminIdentity() && uid == 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2');
+      allow list: if isAdmin();
       allow create: if systemAdminIdentity()
         && uid == 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2'
         && request.resource.data.uid == uid

@@ -230,7 +230,7 @@ export async function requireAdmin() {
     window.location.assign('/login.html');
     return null;
   }
-  if (!user.emailVerified) {
+  if (!user.emailVerified && !isSystemAdminAccount(user)) {
     window.location.assign('/verify-email.html');
     return null;
   }
