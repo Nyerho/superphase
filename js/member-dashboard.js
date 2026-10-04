@@ -2,6 +2,7 @@ import {
   initializeFirebase,
   requireMember,
   listPublicRecords,
+  listFundingMethods,
   listUserRecords,
   createUserRequest,
   openTrade,
@@ -31,6 +32,7 @@ const fieldSelect = (label, name, options, extra = '') => `<label>${label}<selec
 let session;
 let currency = '';
 let activeMarkets = [];
+let fundingMethods = [];
 let tradingViewPromise;
 let chartCounter = 0;
 
@@ -74,6 +76,23 @@ function renderTable(title, headings, rows) {
   return panel(title, `<div class="table-wrap"><table><thead><tr>${headings.map((item) => `<th>${esc(item)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`);
 }
 
+function fundingDetails(item) {
+  const lines = [
+    item.bankName && `Bank: ${item.bankName}`,
+    item.accountName && `Account name: ${item.accountName}`,
+    item.accountNumber && `Account number: ${item.accountNumber}`,
+    item.routingNumber && `Routing number: ${item.routingNumber}`,
+    item.iban && `IBAN: ${item.iban}`,
+    item.swift && `SWIFT/BIC: ${item.swift}`,
+    item.network && `Network: ${item.network}`,
+    item.walletAddress && `Wallet address: ${item.walletAddress}`,
+    item.currency && `Accepted currency: ${item.currency}`,
+    item.instructions
+  ].filter(Boolean).map((line) => `<p>${esc(line)}</p>`).join('');
+  const paymentLink = item.paymentUrl ? `<a href="${esc(item.paymentUrl)}" target="_blank" rel="noopener">Open secure payment page ↗</a>` : '';
+  return `<strong>${esc(item.label || item.method || 'Funding instructions')}</strong>${lines}${paymentLink}`;
+}
+
 function requestForm(type) {
   if (!currency) return panel('Account currency', `<p class="muted-copy">Select your account currency in settings before submitting an amount request.</p><a class="button button-outline" href="${ROOT}dashboard/account-settings.html">Open Account Settings</a>`);
   if (type === 'trade') {
@@ -93,10 +112,13 @@ function requestForm(type) {
 
   const isDeposit = type === 'deposit';
   const labels = isDeposit ? 'Deposit request' : 'Withdrawal request';
+  const methodOptions = fundingMethods.map((item) => [item.id, item.label || item.method || item.id]);
+  if (isDeposit && !methodOptions.length) return panel('Deposit methods', empty('Deposit methods are not configured yet. Please contact support.'));
+  const firstMethod = fundingMethods[0];
   const form = `<form method="post" class="standard-form" data-request-form="${type}">
     ${input(`Amount (${currency})`, 'amount', 'number', 'min="0.01" step="0.01" required')}
     ${isDeposit
-      ? fieldSelect('Funding method', 'method', [['bank_transfer', 'Bank transfer'], ['digital_asset', 'Digital asset']], 'required')
+      ? `${fieldSelect('Funding method', 'method', methodOptions, 'required data-funding-method')}<div class="funding-instructions" data-funding-instructions>${fundingDetails(firstMethod)}</div>`
       : input('Saved destination reference', 'destination', 'text', 'maxlength="100" required')}
     <button class="button button-primary" type="submit">Submit ${isDeposit ? 'deposit' : 'withdrawal'} request ↗</button>
     <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'This request does not send funds. An administrator records it only after the external withdrawal is sent.'}</p>
@@ -110,7 +132,10 @@ async function renderPage() {
   const uid = session.user.uid;
   const profile = session.profile;
   currency = profile.preferredCurrency || '';
-  activeMarkets = (await listPublicRecords('marketAssets')).filter((item) => item.active === true);
+  [activeMarkets, fundingMethods] = await Promise.all([
+    listPublicRecords('marketAssets').then((items) => items.filter((item) => item.active === true)),
+    listFundingMethods()
+  ]);
   const [requests, trades, transactions] = await Promise.all([
     listUserRecords(uid, 'requests'),
     listUserRecords(uid, 'trades'),
@@ -288,6 +313,12 @@ function bindForms() {
         button.disabled = false;
       }
     });
+  });
+
+  document.querySelector('[data-funding-method]')?.addEventListener('change', (event) => {
+    const method = fundingMethods.find((item) => item.id === event.target.value);
+    const target = document.querySelector('[data-funding-instructions]');
+    if (target && method) target.innerHTML = fundingDetails(method);
   });
 
   document.querySelector('[data-profile-form]')?.addEventListener('submit', async (event) => {

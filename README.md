@@ -19,6 +19,7 @@ Vertix Trade is a responsive member and administrator workspace using the establ
 - Administrators maintain `marketAssets` and the Admin page seeds starter records for signals, markets, copy strategies, plans, digital assets, news, and the market calendar when a collection is empty. The member workspace also has a safe read-only starter fallback so empty content collections do not render as dead ends.
 - Active records with a supported `tradingViewSymbol` drive the ticker, selectable market, crypto, stock/equity, and chart-page widgets. Firestore rules bind orders to the exact active listing (including the documented starter markets).
 - Member trades open immediately in an atomic Firestore transaction when the member has sufficient balance; the order amount is reserved from the balance. Deposits and withdrawals remain administrator-approved transactions. Administrators can manually mark KYC verified without a document upload.
+- Administrators configure enabled deposit methods in `fundingMethods/{method}` for bank transfers, crypto wallets, and card payments. Verified members see the selected account, network, wallet or hosted payment URL on the Deposit page. Card payment is an instruction/hosted-checkout link until a real payment processor is connected; raw card data is never stored in Firestore.
 
 ## Firebase and Vercel
 

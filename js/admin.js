@@ -9,6 +9,7 @@ import {
   getUserProfile,
   updateUserRequest,
   processUserRequest,
+  saveFundingMethod,
   updateMemberKyc
 } from './firebase.js';
 
@@ -99,10 +100,11 @@ async function seedStarterContent() {
 
 async function render() {
   await seedStarterContent();
-  const [users, signals, assets, requests] = await Promise.all([
+  const [users, signals, assets, fundingMethods, requests] = await Promise.all([
     listRecords('users'),
     listRecords('signals'),
     listRecords('marketAssets'),
+    listRecords('fundingMethods'),
     listAllUserRequests()
   ]);
 
@@ -120,6 +122,7 @@ async function render() {
     </div>`).join('') : empty('No signals have been published.');
 
   qs('#assets-list').innerHTML = assets.length ? assets.slice().sort((a, b) => String(a.displayName || '').localeCompare(String(b.displayName || ''))).map(marketRow).join('') : empty('No market assets are listed.');
+  qs('#funding-list').innerHTML = fundingMethods.length ? fundingMethods.map((item) => `<div class="admin-list-row"><div><b>${label(item.label || item.method)}</b><small>${label(item.currency || 'Any currency')} · ${item.enabled === true ? 'Enabled' : 'Disabled'}</small></div><span class="status-pill">${label(item.method)}</span></div>`).join('') : empty('No deposit methods configured.');
   qs('#users-list').innerHTML = users.length ? users.map((item) => `
     <div class="admin-list-row admin-user-row">
       <div><b>${label(item.legalName)}</b><small>${label(item.email)}</small></div>
@@ -159,10 +162,25 @@ function marketValues(form) {
   return { displayName, symbol, assetType: String(data.get('assetType') || 'other'), tradingViewSymbol, active: data.has('active') };
 }
 
+const fundingFieldNames = ['label', 'currency', 'bankName', 'accountName', 'accountNumber', 'routingNumber', 'iban', 'swift', 'network', 'walletAddress', 'paymentUrl', 'instructions'];
+function fillFundingForm(record = {}) {
+  const form = qs('#funding-form');
+  if (!form) return;
+  form.elements.namedItem('method').value = record.method || form.elements.namedItem('method').value;
+  for (const name of fundingFieldNames) form.elements.namedItem(name).value = record[name] || '';
+  form.elements.namedItem('enabled').checked = record.enabled === true;
+}
+
+async function loadFundingForm(method) {
+  const records = await listRecords('fundingMethods');
+  fillFundingForm(records.find((item) => item.id === method || item.method === method) || { method });
+}
+
 async function start() {
   const admin = await requireAdmin();
   if (!admin) return;
   qs('#admin-email').textContent = admin.email || 'Administrator';
+  await loadFundingForm('bank_transfer');
 
   qs('#signal-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -201,6 +219,23 @@ async function start() {
       await render();
     } catch (error) {
       status(error.message || 'The market listing could not be added.');
+    }
+  });
+
+  qs('#funding-method').addEventListener('change', (event) => loadFundingForm(event.target.value).catch((error) => status(error.message || 'Funding method could not be loaded.')));
+  qs('#funding-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const method = String(data.get('method') || '');
+    try {
+      const payload = { method, enabled: data.has('enabled') };
+      for (const name of fundingFieldNames) payload[name] = String(data.get(name) || '').trim();
+      await saveFundingMethod(method, payload);
+      await render();
+      status('Deposit method saved. Members will see it immediately.', 'success');
+    } catch (error) {
+      status(error.message || 'The deposit method could not be saved.');
     }
   });
 

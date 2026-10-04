@@ -63,6 +63,28 @@
           </form>
           <div class="admin-list" id="assets-list"><div class="empty-state">Loading market assets…</div></div>
         </article>
+        <article class="admin-panel glass-panel" id="funding-admin">
+          <div class="panel-title"><h2>Deposit methods</h2></div>
+          <p class="admin-workflow-note">Configure where members should send funds. Card payment supports a hosted checkout URL or manual instructions; never store card numbers, CVVs or private keys here.</p>
+          <form class="admin-entry-form" id="funding-form" method="post">
+            <label>Method<select name="method" id="funding-method"><option value="bank_transfer">Bank transfer</option><option value="digital_asset">Crypto / digital asset</option><option value="card_payment">Card payment</option></select></label>
+            <label>Member-facing label<input name="label" required maxlength="80" placeholder="e.g. Main bank account"></label>
+            <label>Accepted currency<input name="currency" maxlength="12" placeholder="USD or USDT"></label>
+            <label>Bank name<input name="bankName" maxlength="120"></label>
+            <label>Account name<input name="accountName" maxlength="120"></label>
+            <label>Account number<input name="accountNumber" maxlength="120"></label>
+            <label>Routing number<input name="routingNumber" maxlength="120"></label>
+            <label>IBAN<input name="iban" maxlength="120"></label>
+            <label>SWIFT / BIC<input name="swift" maxlength="40"></label>
+            <label>Crypto network<input name="network" maxlength="80" placeholder="e.g. ERC-20"></label>
+            <label>Wallet address<input name="walletAddress" maxlength="180"></label>
+            <label>Hosted card payment URL<input name="paymentUrl" type="url" maxlength="500" placeholder="https://…"></label>
+            <label class="admin-checkbox"><input name="enabled" type="checkbox"> Enabled for members</label>
+            <label>Member instructions<textarea name="instructions" rows="4" maxlength="1200" placeholder="Include reference instructions and settlement notes."></textarea></label>
+            <button class="button button-primary button-small" type="submit">Save deposit method</button>
+          </form>
+          <div class="admin-list" id="funding-list"><div class="empty-state">Loading deposit methods…</div></div>
+        </article>
         <article class="admin-panel glass-panel" id="users-admin">
           <div class="panel-title"><h2>Members</h2><button class="button button-quiet button-small" id="refresh-data" type="button">Refresh</button></div>
           <div class="admin-list" id="users-list"><div class="empty-state">Loading members…</div></div>

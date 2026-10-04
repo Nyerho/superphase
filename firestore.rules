@@ -153,7 +153,7 @@ service cloud.firestore {
           && (request.resource.data.type in ['trade', 'deposit', 'withdrawal', 'loan']
             ? accountCurrency(uid, request.resource.data.currency)
             : (!('currency' in request.resource.data) || accountCurrency(uid, request.resource.data.currency)))
-          && (request.resource.data.type != 'deposit' || request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset'])
+          && (request.resource.data.type != 'deposit' || request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment'])
           && (request.resource.data.type != 'withdrawal' || (request.resource.data.get('destination', '') is string && request.resource.data.get('destination', '').size() >= 1 && request.resource.data.get('destination', '').size() <= 100))
           && (request.resource.data.type != 'loan' || request.resource.data.get('purpose', '') in ['business', 'personal', 'other'])
           && (request.resource.data.type != 'trade' || (
@@ -205,7 +205,7 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == request.resource.data.balanceAfter
           && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency
           && ((request.resource.data.type == 'deposit'
-              && request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset']
+              && request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment']
               && request.resource.data.balanceAfter == request.resource.data.balanceBefore + request.resource.data.amount)
             || (request.resource.data.type == 'withdrawal'
               && request.resource.data.get('destination', '') is string
@@ -321,6 +321,10 @@ service cloud.firestore {
     match /marketCalendar/{id} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+    match /fundingMethods/{id} {
+      allow read: if verified() || isAdmin();
+      allow create, update, delete: if isAdmin();
     }
     match /auditLog/{id} {
       allow read: if isAdmin();

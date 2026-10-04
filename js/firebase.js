@@ -32,7 +32,7 @@ const PUBLIC_COLLECTIONS = new Set([
   'digitalAssets', 'news', 'marketCalendar'
 ]);
 const ADMIN_COLLECTIONS = new Set([
-  ...PUBLIC_COLLECTIONS, 'users', 'auditLog'
+  ...PUBLIC_COLLECTIONS, 'users', 'auditLog', 'fundingMethods'
 ]);
 const USER_SUBCOLLECTIONS = new Set([
   'requests', 'trades', 'transactions', 'referrals', 'watchlist', 'settings'
@@ -263,6 +263,19 @@ export async function listPublicRecords(collectionName) {
   return records.length ? records : starterRecords(collectionName);
 }
 
+export async function listFundingMethods() {
+  const { db: firestore } = await firebaseReady();
+  const snapshot = await getDocs(collection(firestore, 'fundingMethods'));
+  return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })).filter((item) => item.enabled === true);
+}
+
+export async function saveFundingMethod(id, data) {
+  const { db: firestore } = await firebaseReady();
+  const allowed = ['method', 'label', 'enabled', 'currency', 'accountName', 'accountNumber', 'bankName', 'routingNumber', 'iban', 'swift', 'network', 'walletAddress', 'paymentUrl', 'instructions'];
+  const safeData = Object.fromEntries(Object.entries(data).filter(([key]) => allowed.includes(key)));
+  await setDoc(doc(firestore, 'fundingMethods', id), { ...safeData, updatedAt: serverTimestamp() }, { merge: true });
+}
+
 export async function listUserRecords(uid, subcollection) {
   const { db: firestore } = await firebaseReady();
   if (!USER_SUBCOLLECTIONS.has(subcollection)) throw new Error('This account collection is not available.');
@@ -399,7 +412,7 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
         ...(request.stopLoss == null ? {} : { stopLoss: Number(request.stopLoss) })
       };
     } else if (request.type === 'deposit' || request.type === 'withdrawal') {
-      if (request.type === 'deposit' && !['bank_transfer', 'digital_asset'].includes(request.method)) throw new Error('Choose a valid deposit method before recording receipt.');
+      if (request.type === 'deposit' && !['bank_transfer', 'digital_asset', 'card_payment'].includes(request.method)) throw new Error('Choose a valid deposit method before recording receipt.');
       if (request.type === 'withdrawal' && (typeof request.destination !== 'string' || !request.destination.trim())) throw new Error('Add a withdrawal destination before recording payment.');
       const storedBalance = profile.balance == null ? 0 : profile.balance;
       const balanceCurrency = profile.balanceCurrency || profile.preferredCurrency;
