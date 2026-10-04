@@ -27,6 +27,19 @@ Set the web-app environment variables listed in `.env.example` in Vercel. `/api/
 
 The uploaded Admin SDK service-account key is not part of the repository or required by the browser application. Never expose it to client code.
 
+### Bootstrap the system administrator
+
+The system administrator UID is `z3KAMbKcGFNYVWH2OKHtz4AT1rs2`. Run `scripts/bootstrap-admin.mjs` locally with a Firebase service-account credential held only in an environment variable. The script verifies the Auth email, optionally sets the password from `VERTIX_ADMIN_PASSWORD`, marks the account email-verified, sets the `admin` custom claim, creates `admins/{uid}`, and deletes `users/{uid}`. It never writes a password to Firestore or the repository.
+
+```bash
+npm install firebase-admin
+export FIREBASE_SERVICE_ACCOUNT_JSON='YOUR_SERVICE_ACCOUNT_JSON_HERE'
+export VERTIX_ADMIN_PASSWORD='YOUR_PASSWORD_IN_YOUR_SHELL_ONLY'
+node scripts/bootstrap-admin.mjs
+```
+
+Replace the two placeholders locally; do not commit the values or paste them into chat. If the Auth account does not already exist with the specified UID and email, create it in Firebase Authentication first.
+
 ## Operational boundary
 
 Member request forms persist authenticated submissions in Firestore with a submitted status. An administrator can record a deposit or withdrawal only after the corresponding external transfer has occurred; the same Firestore transaction then writes an immutable account transaction and adjusts the member's balance in their selected currency. Withdrawals above the recorded balance are rejected, and currency changes are blocked while a non-zero balance remains. The application does not itself move funds, settle withdrawals, or route orders to a broker; connect and validate authorized payment/brokerage services before automating those operations. Regulatory onboarding fields, disclosures, and consent language must be finalized for the jurisdictions Vertix Trade serves.

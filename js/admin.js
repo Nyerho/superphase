@@ -29,6 +29,7 @@ const MARKET_CATEGORIES = [
 const validTradingViewSymbol = (value) => !value || /^[A-Z0-9][A-Z0-9._:-]*$/i.test(value.trim());
 const validMarketSymbol = (value) => /^[A-Z0-9][A-Z0-9._:-]{0,39}$/i.test(value.trim());
 const catalogCache = { plans: [], digitalAssets: [] };
+const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
 
 function status(message, tone = 'error') {
   const node = qs('#admin-status');
@@ -119,10 +120,11 @@ async function render() {
     listRecords('digitalAssets'),
     listAllUserRequests()
   ]);
+  const members = users.filter((item) => (item.uid || item.id) !== SYSTEM_ADMIN_UID);
   catalogCache.plans = plans;
   catalogCache.digitalAssets = digitalAssets;
 
-  qs('#member-count').textContent = String(users.length);
+  qs('#member-count').textContent = String(members.length);
   qs('#signal-count').textContent = String(signals.length);
   qs('#asset-count').textContent = String(assets.length);
   qs('#request-count').textContent = String(requests.filter((item) => item.status === 'submitted').length);
@@ -139,7 +141,7 @@ async function render() {
   qs('#funding-list').innerHTML = fundingMethods.length ? fundingMethods.map((item) => `<div class="admin-list-row"><div><b>${label(item.label || item.method)}</b><small>${label(item.currency || 'Any currency')} · ${item.enabled === true ? 'Enabled' : 'Disabled'}</small></div><span class="status-pill">${label(item.method)}</span></div>`).join('') : empty('No deposit methods configured.');
   qs('#plans-list').innerHTML = plans.length ? plans.map((item) => catalogRow('plans', item, `${item.name || 'Plan'} · ${item.price || 0} ${item.currency || ''}`)).join('') : empty('No subscription plans configured.');
   qs('#digital-assets-list').innerHTML = digitalAssets.length ? digitalAssets.map((item) => catalogRow('digitalAssets', item, `${item.name || 'Digital asset'} · ${item.edition || ''}`)).join('') : empty('No digital assets configured.');
-  qs('#users-list').innerHTML = users.length ? users.map((item) => `
+  qs('#users-list').innerHTML = members.length ? members.map((item) => `
     <div class="admin-list-row admin-user-row">
       <div><b>${label(item.legalName)}</b><small>${label(item.email)}</small></div>
       <span>${label(item.countryOfResidence)}</span>
@@ -147,7 +149,7 @@ async function render() {
       <span class="status-pill">${label(item.accountStatus)}</span><span class="status-pill">KYC: ${label(item.kycStatus || 'not_started')}</span><div class="crud-actions"><button type="button" data-kyc-status="verified" data-uid="${esc(item.uid || item.id)}">Verify KYC</button><button type="button" data-kyc-status="not_started" data-uid="${esc(item.uid || item.id)}">Reset KYC</button></div>
     </div>`).join('') : empty('No member accounts are available.');
   const memberSelect = qs('#ledger-member');
-  memberSelect.innerHTML = `<option value="">Select a member</option>${users.map((item) => `<option value="${esc(item.uid || item.id)}">${label(item.legalName || item.email)} · ${label(item.email)}</option>`).join('')}`;
+  memberSelect.innerHTML = `<option value="">Select a member</option>${members.map((item) => `<option value="${esc(item.uid || item.id)}">${label(item.legalName || item.email)} · ${label(item.email)}</option>`).join('')}`;
   qs('#ledger-market').innerHTML = `<option value="">Select a market</option>${assets.filter((item) => item.active === true).map((item) => `<option value="${esc(item.id)}" data-symbol="${esc(item.symbol)}">${label(item.displayName)} · ${label(item.symbol)}</option>`).join('')}`;
 
   const latestRequests = requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 20);
