@@ -3,6 +3,9 @@ import {
   requireMember,
   listPublicRecords,
   listUserRecords,
+  watchPublicRecords,
+  watchUserRecords,
+  watchUserProfile,
   createUserRequest,
   openTrade
 } from './firebase.js';
@@ -200,6 +203,26 @@ function renderActivityTabs(container, requests, trades, transactions, currency)
   }
 }
 
+async function startLiveSync(uid) {
+  let reloadTimer;
+  const schedule = () => {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => window.location.reload(), 250);
+  };
+  const add = async (register) => {
+    let firstSnapshot = true;
+    await register(() => {
+      if (firstSnapshot) { firstSnapshot = false; return; }
+      schedule();
+    }, () => {});
+  };
+  await add((callback, onError) => watchPublicRecords('marketAssets', callback, onError));
+  for (const subcollection of ['trades', 'transactions', 'requests']) {
+    await add((callback, onError) => watchUserRecords(uid, subcollection, callback, onError));
+  }
+  await add((callback, onError) => watchUserProfile(uid, callback, onError));
+}
+
 async function start() {
   await initializeFirebase();
   const session = await requireMember();
@@ -374,6 +397,7 @@ async function start() {
       form.querySelector('.form-status').textContent = error.message || 'Your message could not be sent.';
     }
   });
+  await startLiveSync(user.uid);
 }
 
 start().catch((error) => setStatus(error.message || 'Account information could not be loaded.'));

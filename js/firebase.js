@@ -22,6 +22,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  onSnapshot,
   doc,
   serverTimestamp,
   Timestamp,
@@ -279,6 +280,33 @@ export async function listFundingMethods() {
   const { db: firestore } = await firebaseReady();
   const snapshot = await getDocs(collection(firestore, 'fundingMethods'));
   return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })).filter((item) => item.enabled === true);
+}
+
+export async function watchPublicRecords(collectionName, callback, onError = () => {}) {
+  const { db: firestore } = await firebaseReady();
+  if (!PUBLIC_COLLECTIONS.has(collectionName)) throw new Error('This collection is not public.');
+  return onSnapshot(collection(firestore, collectionName), (snapshot) => callback(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }))), onError);
+}
+
+export async function watchFundingMethods(callback, onError = () => {}) {
+  const { db: firestore } = await firebaseReady();
+  return onSnapshot(collection(firestore, 'fundingMethods'), (snapshot) => callback(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })).filter((item) => item.enabled === true)), onError);
+}
+
+export async function watchPlatformSettings(callback, onError = () => {}) {
+  const { db: firestore } = await firebaseReady();
+  return onSnapshot(doc(firestore, 'platformSettings', 'global'), (snapshot) => callback(snapshot.exists() ? snapshot.data() : {}), onError);
+}
+
+export async function watchUserRecords(uid, subcollection, callback, onError = () => {}) {
+  const { db: firestore } = await firebaseReady();
+  if (!USER_SUBCOLLECTIONS.has(subcollection)) throw new Error('This account collection is not available.');
+  return onSnapshot(collection(firestore, 'users', uid, subcollection), (snapshot) => callback(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }))), onError);
+}
+
+export async function watchUserProfile(uid, callback, onError = () => {}) {
+  const { db: firestore } = await firebaseReady();
+  return onSnapshot(doc(firestore, 'users', uid), (snapshot) => callback(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null), onError);
 }
 
 export async function saveFundingMethod(id, data) {

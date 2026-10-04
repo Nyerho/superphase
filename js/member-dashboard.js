@@ -5,6 +5,11 @@ import {
   listFundingMethods,
   getPlatformSettings,
   listUserRecords,
+  watchPublicRecords,
+  watchFundingMethods,
+  watchPlatformSettings,
+  watchUserRecords,
+  watchUserProfile,
   createUserRequest,
   openTrade,
   updateUserProfile,
@@ -37,6 +42,8 @@ let fundingMethods = [];
 let platformSettings = {};
 let tradingViewPromise;
 let chartCounter = 0;
+let realtimeTimer;
+const realtimeUnsubscribers = [];
 
 function renderShell() {
   const [title, description] = pageTitles[pageKey] || pageTitles.overview;
@@ -71,6 +78,33 @@ function renderShell() {
     await signOutUser();
     window.location.assign(`${ROOT}login.html`);
   });
+}
+
+function scheduleRealtimeRender() {
+  clearTimeout(realtimeTimer);
+  realtimeTimer = setTimeout(() => renderPage().catch(() => {}), 250);
+}
+
+async function startRealtime() {
+  const add = async (register, callback) => {
+    let firstSnapshot = true;
+    const unsubscribe = await register((value) => {
+      if (firstSnapshot) { firstSnapshot = false; return; }
+      callback(value);
+    }, () => {});
+    realtimeUnsubscribers.push(unsubscribe);
+  };
+  for (const collectionName of ['signals', 'marketAssets', 'copyStrategies', 'plans', 'digitalAssets', 'news', 'marketCalendar']) {
+    await add((callback, onError) => watchPublicRecords(collectionName, callback, onError), scheduleRealtimeRender);
+  }
+  for (const subcollection of ['requests', 'trades', 'transactions', 'settings']) {
+    await add((callback, onError) => watchUserRecords(session.user.uid, subcollection, callback, onError), scheduleRealtimeRender);
+  }
+  await add((callback, onError) => watchUserProfile(session.user.uid, (profile) => { if (profile) session.profile = profile; callback(profile); }, onError), scheduleRealtimeRender);
+  if (pageKey === 'deposits' || pageKey === 'withdrawals') {
+    await add((callback, onError) => watchFundingMethods((methods) => { fundingMethods = methods; callback(methods); }, onError), scheduleRealtimeRender);
+    await add((callback, onError) => watchPlatformSettings((settings) => { platformSettings = settings; callback(settings); }, onError), scheduleRealtimeRender);
+  }
 }
 
 function renderTable(title, headings, rows) {
@@ -425,6 +459,7 @@ async function start() {
   const status = session.profile.accountStatus || 'Account';
   document.querySelectorAll('[data-account-status]').forEach((node) => { node.textContent = status.replaceAll('_', ' '); });
   await renderPage();
+  await startRealtime();
 }
 
 start().catch((error) => {
