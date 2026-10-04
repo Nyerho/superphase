@@ -132,10 +132,8 @@ async function renderPage() {
   const uid = session.user.uid;
   const profile = session.profile;
   currency = profile.preferredCurrency || '';
-  [activeMarkets, fundingMethods] = await Promise.all([
-    listPublicRecords('marketAssets').then((items) => items.filter((item) => item.active === true)),
-    listFundingMethods()
-  ]);
+  activeMarkets = (await listPublicRecords('marketAssets')).filter((item) => item.active === true);
+  fundingMethods = (pageKey === 'deposits') ? await listFundingMethods() : [];
   const [requests, trades, transactions] = await Promise.all([
     listUserRecords(uid, 'requests'),
     listUserRecords(uid, 'trades'),
