@@ -34,11 +34,11 @@ service cloud.firestore {
     function activeMarket(marketId, symbol) {
       let marketPath = /databases/$(database)/documents/marketAssets/$(marketId);
       return marketId is string
-        && marketId == symbol
         && marketId.matches('^[A-Z0-9][A-Z0-9._:-]{0,39}$')
-        && exists(marketPath)
-        && get(marketPath).data.active == true
-        && get(marketPath).data.symbol == symbol;
+        && ((exists(marketPath)
+          && get(marketPath).data.active == true
+          && get(marketPath).data.symbol == symbol)
+          || (marketId == symbol && marketId in ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'AAPL', 'NVDA', 'TSLA', 'XAUUSD']));
     }
 
     function validMarketAsset(data) {
@@ -122,7 +122,19 @@ service cloud.firestore {
         && validCurrency(request.resource.data.preferredCurrency)
         && (request.resource.data.preferredCurrency == resource.data.preferredCurrency
           || !('balance' in resource.data)
-          || resource.data.balance == 0));
+          || resource.data.balance == 0))
+        || (signedIn()
+          && request.auth.uid == uid
+          && request.auth.token.email_verified == true
+          && resource.data.accountStatus == 'pending_verification'
+          && request.resource.data.accountStatus == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accountStatus', 'emailVerifiedAt', 'updatedAt']))
+        || (owns(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['balance', 'balanceCurrency', 'balanceUpdatedAt', 'updatedAt'])
+          && request.resource.data.balance is number
+          && request.resource.data.balance >= 0
+          && request.resource.data.balance <= resource.data.get('balance', 0)
+          && request.resource.data.balanceCurrency == request.resource.data.preferredCurrency);
       allow delete: if false;
 
       match /requests/{requestId} {
@@ -203,9 +215,9 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      match /trades/{tradeId} {
+    match /trades/{tradeId} {
         allow read: if owns(uid) || isAdmin();
-        allow create: if isAdmin()
+      allow create: if isAdmin()
           && tradeId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
           && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy'])
@@ -234,6 +246,32 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.amount == request.resource.data.amount
           && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.currency == request.resource.data.currency
           && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.leverage == request.resource.data.leverage;
+      allow create: if owns(uid)
+        && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
+        && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy'])
+        && request.resource.data.uid == uid
+        && request.resource.data.requestId == tradeId
+        && request.resource.data.type == 'trade'
+        && request.resource.data.marketId is string
+        && request.resource.data.symbol is string
+        && activeMarket(request.resource.data.marketId, request.resource.data.symbol)
+        && request.resource.data.side in ['buy', 'sell']
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && accountCurrency(uid, request.resource.data.currency)
+        && request.resource.data.leverage is number
+        && request.resource.data.leverage >= 1
+        && request.resource.data.leverage <= 10
+        && request.resource.data.entryPrice is number
+        && request.resource.data.entryPrice > 0
+        && request.resource.data.status == 'open'
+        && request.resource.data.openedAt is timestamp
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.processedBy == 'member-balance'
+        && get(/databases/$(database)/documents/users/$(uid)).data.balance is number
+        && get(/databases/$(database)/documents/users/$(uid)).data.balance >= request.resource.data.amount
+        && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == get(/databases/$(database)/documents/users/$(uid)).data.balance - request.resource.data.amount
+        && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency;
         allow update, delete: if false;
       }
 

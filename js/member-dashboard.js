@@ -4,6 +4,7 @@ import {
   listPublicRecords,
   listUserRecords,
   createUserRequest,
+  openTrade,
   updateUserProfile,
   saveUserSetting
 } from './firebase.js';
@@ -84,8 +85,8 @@ function requestForm(type) {
       ${input('Order size', 'amount', 'number', 'min="0.01" step="0.01" required')}
       ${fieldSelect('Leverage', 'leverage', [['1', '1×'], ['2', '2×'], ['5', '5×'], ['10', '10×']], 'required')}
       ${fieldSelect('Duration', 'duration', [['1h', '1 hour'], ['4h', '4 hours'], ['1d', '1 day']], 'required')}
-      <button class="button button-primary" type="submit">Submit order request ↗</button>
-      <p class="form-disclosure">This submits an order request, not an executed trade. An open trade is recorded only after external execution is confirmed by an administrator.</p>
+      <button class="button button-primary" type="submit">Open trade ↗</button>
+      <p class="form-disclosure">Trades open immediately when your available balance covers the order. Deposits and withdrawals still require administrator approval.</p>
       <p class="form-status" aria-live="polite"></p>
     </form>`);
   }
@@ -272,8 +273,13 @@ function bindForms() {
       const button = form.querySelector('button[type="submit"]');
       button.disabled = true;
       try {
-        const id = await createUserRequest(session.user.uid, type, fields);
-        setFormStatus(form, `Request submitted. Reference: ${id}`, 'success');
+        if (type === 'trade') {
+          const result = await openTrade(session.user.uid, { ...fields, entryPrice: 1 });
+          setFormStatus(form, `Trade opened. Reference: ${result.recordId}. Remaining balance: ${result.balanceAfter.toLocaleString()} ${currency}.`, 'success');
+        } else {
+          const id = await createUserRequest(session.user.uid, type, fields);
+          setFormStatus(form, `Request submitted. Reference: ${id}`, 'success');
+        }
         form.reset();
         await renderPage();
       } catch (error) {

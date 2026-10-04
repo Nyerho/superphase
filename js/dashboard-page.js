@@ -3,7 +3,8 @@ import {
   requireMember,
   listPublicRecords,
   listUserRecords,
-  createUserRequest
+  createUserRequest,
+  openTrade
 } from './firebase.js';
 import { renderLegacyNavigation } from './dashboard-nav.js';
 
@@ -19,15 +20,13 @@ const timeText = (value) => value?.toDate ? value.toDate().toLocaleString() : 'â
 const timeValue = (value) => value?.toMillis ? value.toMillis() : (value?.seconds || 0) * 1000;
 const validTradingViewSymbol = (value) => typeof value === 'string' && /^[A-Z0-9][A-Z0-9._:-]*$/i.test(value.trim());
 const DEFAULT_MARKETS = [
-  { id: 'default-btcusdt', assetType: 'Crypto', symbol: 'BTC/USDT', displayName: 'Bitcoin', tradingViewSymbol: 'BINANCE:BTCUSDT', active: true },
-  { id: 'default-ethusdt', assetType: 'Crypto', symbol: 'ETH/USDT', displayName: 'Ethereum', tradingViewSymbol: 'BINANCE:ETHUSDT', active: true },
-  { id: 'default-solusdt', assetType: 'Crypto', symbol: 'SOL/USDT', displayName: 'Solana', tradingViewSymbol: 'BINANCE:SOLUSDT', active: true },
-  { id: 'default-bnbusdt', assetType: 'Crypto', symbol: 'BNB/USDT', displayName: 'BNB', tradingViewSymbol: 'BINANCE:BNBUSDT', active: true },
-  { id: 'default-amzn', assetType: 'Stock', symbol: 'AMZN', displayName: 'Amazon', tradingViewSymbol: 'NASDAQ:AMZN', active: true },
-  { id: 'default-aapl', assetType: 'Stock', symbol: 'AAPL', displayName: 'Apple', tradingViewSymbol: 'NASDAQ:AAPL', active: true },
-  { id: 'default-msft', assetType: 'Stock', symbol: 'MSFT', displayName: 'Microsoft', tradingViewSymbol: 'NASDAQ:MSFT', active: true },
-  { id: 'default-nvda', assetType: 'Stock', symbol: 'NVDA', displayName: 'NVIDIA', tradingViewSymbol: 'NASDAQ:NVDA', active: true },
-  { id: 'default-tsla', assetType: 'Stock', symbol: 'TSLA', displayName: 'Tesla', tradingViewSymbol: 'NASDAQ:TSLA', active: true }
+  { id: 'BTCUSDT', assetType: 'crypto', symbol: 'BTCUSDT', displayName: 'Bitcoin', tradingViewSymbol: 'BINANCE:BTCUSDT', active: true },
+  { id: 'ETHUSDT', assetType: 'crypto', symbol: 'ETHUSDT', displayName: 'Ethereum', tradingViewSymbol: 'BINANCE:ETHUSDT', active: true },
+  { id: 'SOLUSDT', assetType: 'crypto', symbol: 'SOLUSDT', displayName: 'Solana', tradingViewSymbol: 'BINANCE:SOLUSDT', active: true },
+  { id: 'AAPL', assetType: 'stocks', symbol: 'AAPL', displayName: 'Apple', tradingViewSymbol: 'NASDAQ:AAPL', active: true },
+  { id: 'NVDA', assetType: 'stocks', symbol: 'NVDA', displayName: 'NVIDIA', tradingViewSymbol: 'NASDAQ:NVDA', active: true },
+  { id: 'TSLA', assetType: 'stocks', symbol: 'TSLA', displayName: 'Tesla', tradingViewSymbol: 'NASDAQ:TSLA', active: true },
+  { id: 'XAUUSD', assetType: 'commodities', symbol: 'XAUUSD', displayName: 'Gold', tradingViewSymbol: 'OANDA:XAUUSD', active: true }
 ];
 
 let tradingViewPromise;
@@ -269,7 +268,7 @@ async function start() {
     const note = document.createElement('p');
     note.id = 'trade-request-disclosure';
     note.className = 'dashboard-operation-note';
-    note.textContent = 'Buy and sell submit order requests. They are not executed by this page; an open trade is recorded only after an administrator confirms an external execution and its actual fill price.';
+    note.textContent = 'Buy and sell open immediately when your available balance covers the order. Deposits and withdrawals still require administrator approval.';
     tradeForm.parentElement.insertBefore(note, tradeForm);
   }
 
@@ -326,7 +325,7 @@ async function start() {
       }
       button.disabled = true;
       try {
-        const id = await createUserRequest(user.uid, 'trade', {
+        const result = await openTrade(user.uid, {
           marketId: market.id,
           symbol: market.symbol,
           side: button.dataset.action,
@@ -335,10 +334,13 @@ async function start() {
           leverage,
           duration: String(form.elements.namedItem('duration')?.value || ''),
           ...(takeProfit === undefined ? {} : { takeProfit }),
-          ...(stopLoss === undefined ? {} : { stopLoss })
+          ...(stopLoss === undefined ? {} : { stopLoss }),
+          entryPrice: 1
         });
-        if (status) status.textContent = `Order request submitted. Reference: ${id}`;
-        requests = await listUserRecords(user.uid, 'requests');
+        if (status) status.textContent = `Trade opened. Reference: ${result.recordId}. Remaining balance: ${result.balanceAfter.toLocaleString()} ${currency}.`;
+        profile.balance = result.balanceAfter;
+        trades = await listUserRecords(user.uid, 'trades');
+        document.querySelectorAll('[data-account-balance]').forEach((node) => { node.textContent = money(result.balanceAfter, currency); });
         if (activityHost) renderActivityTabs(activityHost, requests, trades, transactions, currency);
       } catch (error) {
         if (status) status.textContent = error.message || 'The order request could not be submitted.';

@@ -1,3 +1,4 @@
+import { starterRecords } from './catalog.js';
 import {
   requireAdmin,
   listRecords,
@@ -7,7 +8,8 @@ import {
   deleteRecord,
   getUserProfile,
   updateUserRequest,
-  processUserRequest
+  processUserRequest,
+  updateMemberKyc
 } from './firebase.js';
 
 const qs = (selector) => document.querySelector(selector);
@@ -82,7 +84,21 @@ function requestActions(item) {
   return statusControls;
 }
 
+async function seedStarterContent() {
+  for (const collectionName of ['signals', 'marketAssets', 'copyStrategies', 'plans', 'digitalAssets', 'news', 'marketCalendar']) {
+    const existing = await listRecords(collectionName);
+    if (existing.length) continue;
+    for (const record of starterRecords(collectionName)) {
+      try {
+        const { id, ...data } = record;
+        await createRecord(collectionName, data);
+      } catch (error) { console.warn(`Starter ${collectionName} record skipped`, error); }
+    }
+  }
+}
+
 async function render() {
+  await seedStarterContent();
   const [users, signals, assets, requests] = await Promise.all([
     listRecords('users'),
     listRecords('signals'),
@@ -109,7 +125,7 @@ async function render() {
       <div><b>${label(item.legalName)}</b><small>${label(item.email)}</small></div>
       <span>${label(item.countryOfResidence)}</span>
       <span>${label(item.preferredCurrency)}</span>
-      <span class="status-pill">${label(item.accountStatus)}</span>
+      <span class="status-pill">${label(item.accountStatus)}</span><span class="status-pill">KYC: ${label(item.kycStatus || 'not_started')}</span><div class="crud-actions"><button type="button" data-kyc-status="verified" data-uid="${esc(item.uid || item.id)}">Verify KYC</button><button type="button" data-kyc-status="not_started" data-uid="${esc(item.uid || item.id)}">Reset KYC</button></div>
     </div>`).join('') : empty('No member accounts are available.');
 
   const latestRequests = requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 20);
@@ -238,6 +254,19 @@ async function start() {
       const { signOutUser } = await import('./firebase.js');
       await signOutUser();
       window.location.assign('/login.html');
+      return;
+    }
+    const kycButton = event.target.closest('[data-kyc-status]');
+    if (kycButton) {
+      kycButton.disabled = true;
+      try {
+        await updateMemberKyc(kycButton.dataset.uid, kycButton.dataset.kycStatus);
+        await render();
+        status(`KYC marked ${kycButton.dataset.kycStatus.replace('_', ' ')}.`, 'success');
+      } catch (error) {
+        kycButton.disabled = false;
+        status(error.message || 'KYC status could not be updated.');
+      }
       return;
     }
     const requestButton = event.target.closest('[data-request-status]');

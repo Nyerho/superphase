@@ -1,3 +1,4 @@
+import { starterRecords } from './catalog.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
   getAuth,
@@ -155,6 +156,18 @@ export async function refreshAuthUser() {
   return user;
 }
 
+async function syncVerifiedProfile(user) {
+  if (!user?.emailVerified) return;
+  const profile = await getUserProfile(user.uid);
+  if (profile?.accountStatus === 'pending_verification') {
+    await updateDoc(doc(db, 'users', user.uid), { accountStatus: 'active', emailVerifiedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  }
+}
+
+export async function markEmailVerified(user) {
+  await syncVerifiedProfile(user);
+}
+
 export async function resendVerificationEmail() {
   const user = await getAuthUser();
   if (!user) throw new Error('Sign in to request a verification email.');
@@ -173,6 +186,18 @@ export async function getUserProfile(uid) {
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
 }
 
+export async function updateMemberKyc(uid, status) {
+  const { db: firestore } = await firebaseReady();
+  if (!['not_started', 'pending_review', 'verified', 'rejected'].includes(status)) {
+    throw new Error('This KYC status is not available.');
+  }
+  await updateDoc(doc(firestore, 'users', uid), {
+    kycStatus: status,
+    kycVerifiedAt: status === 'verified' ? serverTimestamp() : null,
+    updatedAt: serverTimestamp()
+  });
+}
+
 export async function requireMember() {
   const user = await getAuthUser();
   if (!user) {
@@ -183,8 +208,12 @@ export async function requireMember() {
     window.location.assign('/verify-email.html');
     return null;
   }
-  const profile = await getUserProfile(user.uid);
+  let profile = await getUserProfile(user.uid);
   if (!profile) throw new Error('Your account profile could not be found. Contact Vertix Trade support.');
+  if (user.emailVerified && profile.accountStatus === 'pending_verification') {
+    await syncVerifiedProfile(user);
+    profile = await getUserProfile(user.uid);
+  }
   return { user, profile };
 }
 
@@ -230,7 +259,8 @@ export async function listPublicRecords(collectionName) {
   const { db: firestore } = await firebaseReady();
   if (!PUBLIC_COLLECTIONS.has(collectionName)) throw new Error('This collection is not public.');
   const snapshot = await getDocs(collection(firestore, collectionName));
-  return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  const records = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  return records.length ? records : starterRecords(collectionName);
 }
 
 export async function listUserRecords(uid, subcollection) {
@@ -285,6 +315,35 @@ export async function updateUserRequest(uid, requestId, status) {
   await updateDoc(doc(firestore, 'users', uid, 'requests', requestId), {
     status,
     updatedAt: serverTimestamp()
+  });
+}
+
+export async function openTrade(uid, fields = {}) {
+  const { db: firestore } = await firebaseReady();
+  const profileRef = doc(firestore, 'users', uid);
+  const marketRef = doc(firestore, 'marketAssets', String(fields.marketId || ''));
+  const tradeRef = doc(collection(firestore, 'users', uid, 'trades'));
+  return runTransaction(firestore, async (transaction) => {
+    const [profileSnapshot, marketSnapshot] = await Promise.all([transaction.get(profileRef), transaction.get(marketRef)]);
+    if (!profileSnapshot.exists()) throw new Error('Your account profile could not be found.');
+    const profile = profileSnapshot.data();
+    const amount = Number(fields.amount);
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a trade amount greater than zero.');
+    const balance = Number(profile.balance || 0);
+    if (!Number.isFinite(balance) || balance <= 0) throw new Error('A positive account balance is required before opening a trade.');
+    if (amount > balance) throw new Error('The trade amount exceeds your available balance.');
+    const market = marketSnapshot.exists() ? marketSnapshot.data() : null;
+    const starterMarket = starterRecords('marketAssets').find((item) => item.id === fields.marketId && item.symbol === fields.symbol);
+    if ((!market?.active || market.symbol !== fields.symbol) && !starterMarket) throw new Error('This market is not currently available.');
+    const now = serverTimestamp();
+    transaction.set(tradeRef, {
+      uid, requestId: tradeRef.id, marketId: String(fields.marketId), type: 'trade', symbol: String(fields.symbol),
+      side: fields.side, amount, currency: String(fields.currency), leverage: Number(fields.leverage),
+      duration: String(fields.duration || ''), entryPrice: Number(fields.entryPrice || 0), status: 'open',
+      openedAt: now, createdAt: now, processedBy: 'member-balance'
+    });
+    transaction.update(profileRef, { balance: balance - amount, balanceCurrency: String(fields.currency), balanceUpdatedAt: now, updatedAt: now });
+    return { recordId: tradeRef.id, balanceAfter: balance - amount };
   });
 }
 

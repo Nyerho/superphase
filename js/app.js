@@ -6,7 +6,8 @@ import {
   getAuthUser,
   resendVerificationEmail,
   refreshAuthUser,
-  listPublicRecords
+  listPublicRecords,
+  markEmailVerified
 } from './firebase.js';
 
 const qs = (selector, root = document) => root.querySelector(selector);
@@ -108,6 +109,7 @@ document.addEventListener('click', async (event) => {
     try {
       const user = await refreshAuthUser();
       if (user?.emailVerified) {
+        await markEmailVerified(user);
         window.location.assign((await hasAdminClaim(user, true)) ? '/admin.html' : '/user-dashboard.html');
       } else if (qs('[data-verification-status]')) {
         qs('[data-verification-status]').textContent = 'Email verification is still pending. Open the latest verification email, then try again.';
@@ -189,6 +191,7 @@ qs('#login-form')?.addEventListener('submit', async (event) => {
       window.location.assign('/verify-email.html?send=pending');
       return;
     }
+    await markEmailVerified(credential.user);
     window.location.assign((await hasAdminClaim(credential.user, true)) ? '/admin.html' : '/user-dashboard.html');
   } catch (error) {
     setStatus(form, errorMessage(error));
