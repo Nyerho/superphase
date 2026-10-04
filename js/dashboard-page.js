@@ -168,19 +168,19 @@ function addTicker(markets) {
 }
 
 function renderActivityTabs(container, requests, trades, transactions, currency) {
-  const openTrades = trades.filter((item) => item.status === 'open').slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8);
-  const tradeRows = openTrades.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${item.entryPrice == null ? '—' : esc(Number(item.entryPrice).toLocaleString(undefined, { maximumSignificantDigits: 10 }))}</td><td>${esc(timeText(item.openedAt || item.createdAt))}</td></tr>`);
-  const transactionRows = transactions.slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.destination || item.reference || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.completedAt || item.createdAt))}</td></tr>`);
+  const recentTrades = trades.slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8);
+  const tradeRows = recentTrades.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td class="${Number(item.realizedPnl ?? item.unrealizedPnl) >= 0 ? 'text-success' : 'text-danger'}">${item.realizedPnl != null ? esc(money(item.realizedPnl, item.currency || currency)) : item.unrealizedPnl != null ? esc(money(item.unrealizedPnl, item.currency || currency)) : '—'}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.closedAt || item.openedAt || item.createdAt))}</td></tr>`);
+  const transactionRows = transactions.slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.destination || item.reference || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.completedAt || item.createdAt))}</td></tr>`);
   const requestRows = requests.filter((item) => !item.resultId).slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8).map((item) => `<tr><td><b>${esc(item.type || 'Request')}</b></td><td>${esc(item.symbol || item.method || item.destination || item.purpose || item.subject || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(timeText(item.createdAt))}</td></tr>`);
   container.innerHTML = `
     <section class="dashboard-activity-panel" aria-label="Account activity">
       <div class="dashboard-activity-tabs" role="tablist" aria-label="Account activity">
-        <button type="button" role="tab" id="tab-open-trades" aria-controls="panel-open-trades" aria-selected="true" data-activity-tab="open-trades">Recent open trades</button>
+        <button type="button" role="tab" id="tab-open-trades" aria-controls="panel-open-trades" aria-selected="true" data-activity-tab="open-trades">Recent trades</button>
         <button type="button" role="tab" id="tab-transactions" aria-controls="panel-transactions" aria-selected="false" data-activity-tab="transactions">Recent transactions</button>
         <button type="button" role="tab" id="tab-requests" aria-controls="panel-requests" aria-selected="false" data-activity-tab="requests">Account requests</button>
       </div>
-      <div id="panel-open-trades" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-open-trades">
-        <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Entry price</th><th>Opened</th></tr></thead><tbody>${tradeRows.length ? tradeRows.join('') : '<tr><td colspan="5">No open trades have been recorded.</td></tr>'}</tbody></table></div>
+        <div id="panel-open-trades" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-open-trades">
+          <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Simulated P/L</th><th>Status</th><th>Date</th></tr></thead><tbody>${tradeRows.length ? tradeRows.join('') : '<tr><td colspan="6">No trades have been recorded.</td></tr>'}</tbody></table></div>
       </div>
       <div id="panel-transactions" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-transactions" hidden>
         <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Type</th><th>Details</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${transactionRows.length ? transactionRows.join('') : '<tr><td colspan="5">No completed transactions have been recorded.</td></tr>'}</tbody></table></div>

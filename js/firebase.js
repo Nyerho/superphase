@@ -47,6 +47,13 @@ let db;
 let firebasePromise;
 const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
 const SYSTEM_ADMIN_EMAIL = 'admin@vertixtrades.com';
+function simulatedPnl(amount, symbol, side) {
+  const text = `${symbol}:${side}`;
+  const hash = [...text].reduce((total, character) => (total * 31 + character.charCodeAt(0)) >>> 0, 7);
+  const rate = 0.0025 + (hash % 35) / 10000;
+  const direction = (hash % 2 === 0 ? 1 : -1) * (side === 'sell' ? -1 : 1);
+  return Number((Number(amount) * rate * direction).toFixed(2));
+}
 
 function firebaseReady() {
   if (!firebasePromise) {
@@ -405,7 +412,7 @@ export async function openTrade(uid, fields = {}) {
     transaction.set(tradeRef, {
       uid, requestId: tradeRef.id, marketId: String(fields.marketId), type: 'trade', symbol: String(fields.symbol),
       side: fields.side, amount, currency: String(fields.currency), leverage: Number(fields.leverage),
-      duration: String(fields.duration || ''), entryPrice: Number(fields.entryPrice || 0), status: 'open',
+      duration: String(fields.duration || ''), entryPrice: Number(fields.entryPrice || 0), status: 'open', unrealizedPnl: simulatedPnl(amount, fields.symbol, fields.side),
       openedAt: now, createdAt: now, processedBy: 'member-balance'
     });
     transaction.update(profileRef, { balance: balance - amount, balanceCurrency: String(fields.currency), balanceUpdatedAt: now, updatedAt: now });
@@ -432,11 +439,39 @@ export async function addManualTrade(uid, fields = {}) {
     transaction.set(tradeRef, {
       uid, requestId: tradeRef.id, marketId: String(fields.marketId), type: 'trade', symbol: String(fields.symbol), side: fields.side,
       amount, currency: String(fields.currency), leverage: Number(fields.leverage || 1), duration: String(fields.duration || ''),
-      entryPrice, status: 'open', openedAt: at, createdAt: at, processedBy: 'admin-manual', manual: true,
+      entryPrice, status: 'open', unrealizedPnl: simulatedPnl(amount, fields.symbol, fields.side), openedAt: at, createdAt: at, processedBy: 'admin-manual', manual: true,
       ...(fields.takeProfit ? { takeProfit: Number(fields.takeProfit) } : {}), ...(fields.stopLoss ? { stopLoss: Number(fields.stopLoss) } : {})
     });
   });
   return tradeRef.id;
+}
+
+export async function applyTradePnl(uid, tradeId, pnl, closePrice, at = new Date()) {
+  const { db: firestore } = await firebaseReady();
+  const profitLoss = Number(pnl);
+  const effectiveAt = at instanceof Date ? Timestamp.fromDate(at) : Timestamp.now();
+  if (!tradeId || !Number.isFinite(profitLoss) || profitLoss === 0) throw new Error('Enter a non-zero profit or loss amount.');
+  const tradeRef = doc(firestore, 'users', uid, 'trades', tradeId);
+  const profileRef = doc(firestore, 'users', uid);
+  const transactionRef = doc(collection(firestore, 'users', uid, 'transactions'));
+  await runTransaction(firestore, async (transaction) => {
+    const [tradeSnapshot, profileSnapshot] = await Promise.all([transaction.get(tradeRef), transaction.get(profileRef)]);
+    if (!tradeSnapshot.exists()) throw new Error('The selected trade could not be found.');
+    if (!profileSnapshot.exists()) throw new Error('The member profile could not be found.');
+    const trade = tradeSnapshot.data();
+    const profile = profileSnapshot.data();
+    if (trade.status === 'closed') throw new Error('This trade has already been settled.');
+    const currency = String(trade.currency || profile.preferredCurrency || '');
+    if (currency !== profile.preferredCurrency) throw new Error('The trade currency must match the member preferred currency.');
+    const before = Number(profile.balance || 0);
+    const after = before + profitLoss;
+    if (after < 0) throw new Error('This loss exceeds the member balance.');
+    const price = Number(closePrice);
+    transaction.update(tradeRef, { realizedPnl: profitLoss, unrealizedPnl: 0, status: 'closed', closedAt: effectiveAt, updatedAt: effectiveAt, processedBy: 'admin-manual', ...(Number.isFinite(price) && price > 0 ? { closePrice: price } : {}) });
+    transaction.set(transactionRef, { uid, requestId: transactionRef.id, type: 'profit_loss', amount: Math.abs(profitLoss), pnl: profitLoss, currency, method: 'trade_pnl', status: 'completed', balanceBefore: before, balanceAfter: after, completedAt: effectiveAt, createdAt: effectiveAt, processedBy: 'admin-manual', manual: true });
+    transaction.update(profileRef, { balance: after, balanceCurrency: currency, balanceUpdatedAt: effectiveAt, updatedAt: serverTimestamp() });
+  });
+  return transactionRef.id;
 }
 
 export async function addManualTransaction(uid, fields = {}) {
@@ -510,7 +545,7 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
       record = {
         uid, requestId, marketId: request.marketId, type: 'trade', symbol: String(request.symbol), side: request.side,
         amount, currency, leverage, duration: String(request.duration || ''),
-        entryPrice: price, status: 'open', openedAt: null,
+        entryPrice: price, status: 'open', unrealizedPnl: simulatedPnl(amount, request.symbol, request.side), openedAt: null,
         ...(request.takeProfit == null ? {} : { takeProfit: Number(request.takeProfit) }),
         ...(request.stopLoss == null ? {} : { stopLoss: Number(request.stopLoss) })
       };

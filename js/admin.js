@@ -7,6 +7,7 @@ import {
   updateRecord,
   deleteRecord,
   getUserProfile,
+  listUserRecords,
   updateUserRequest,
   processUserRequest,
   saveFundingMethod,
@@ -15,6 +16,7 @@ import {
   setMemberBalance,
   addManualTrade,
   addManualTransaction,
+  applyTradePnl,
   updateMemberKyc
 } from './firebase.js';
 
@@ -160,8 +162,10 @@ async function render() {
   memberSelect.innerHTML = `<option value="">Select a member</option>${members.map((item) => `<option value="${esc(item.uid || item.id)}" data-currency="${esc(item.preferredCurrency || '')}">${label(item.legalName || item.email)} · ${label(item.email)}</option>`).join('')}`;
   memberSelect.onchange = () => {
     const memberCurrency = memberSelect.selectedOptions[0]?.dataset.currency;
-    if (!memberCurrency) return;
-    for (const input of document.querySelectorAll('#balance-form [name="currency"], #ledger-transaction-form [name="currency"], #ledger-trade-form [name="currency"]')) input.value = memberCurrency;
+    if (memberCurrency) {
+      for (const input of document.querySelectorAll('#balance-form [name="currency"], #ledger-transaction-form [name="currency"], #ledger-trade-form [name="currency"]')) input.value = memberCurrency;
+    }
+    if (memberSelect.value) loadPnlTrades(memberSelect.value);
   };
   qs('#ledger-market').innerHTML = `<option value="">Select a market</option>${assets.filter((item) => item.active === true).map((item) => `<option value="${esc(item.id)}" data-symbol="${esc(item.symbol)}">${label(item.displayName)} · ${label(item.symbol)}</option>`).join('')}`;
 
@@ -237,6 +241,19 @@ function ledgerDate(value) {
   const date = new Date(String(value || ''));
   if (Number.isNaN(date.getTime()) || date > new Date()) throw new Error('Enter a valid past or current effective date and time.');
   return date;
+}
+
+async function loadPnlTrades(uid) {
+  const select = qs('#pnl-trade');
+  if (!select) return;
+  select.innerHTML = '<option value="">Loading open trades…</option>';
+  try {
+    const trades = (await listUserRecords(uid, 'trades')).filter((item) => item.status === 'open');
+    select.innerHTML = trades.length ? `<option value="">Select an open trade</option>${trades.map((item) => `<option value="${esc(item.id)}">${label(item.symbol)} · ${label(item.side)} · ${label(item.currency)} · ${Number(item.amount || 0).toLocaleString()}</option>`).join('')}` : '<option value="">No open trades</option>';
+  } catch (error) {
+    select.innerHTML = '<option value="">Could not load trades</option>';
+    status(error.message || 'Open trades could not be loaded.');
+  }
 }
 
 async function start() {
@@ -373,6 +390,18 @@ async function start() {
       status('Backdated trade history added.', 'success');
       await render();
     } catch (error) { status(error.message || 'Trade history could not be added.'); }
+  });
+
+  qs('#trade-pnl-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uid = ledgerMemberId();
+      const data = new FormData(event.currentTarget);
+      await applyTradePnl(uid, String(data.get('tradeId') || ''), Number(data.get('pnl')), Number(data.get('closePrice')) || undefined, ledgerDate(data.get('at')));
+      status('Trade settled and the member balance was updated.', 'success');
+      event.currentTarget.reset();
+      await render();
+    } catch (error) { status(error.message || 'Trade P/L could not be settled.'); }
   });
 
   document.addEventListener('submit', async (event) => {

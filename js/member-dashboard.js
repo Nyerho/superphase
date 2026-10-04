@@ -195,12 +195,12 @@ async function renderPage() {
     const accountBalance = profile.balance == null || (balanceCurrency !== currency && profile.balance !== 0) ? '—' : money(profile.balance, currency);
     content.innerHTML = `<div class="content-grid"><div>${requestForm('trade')}${renderTable('Order requests', ['Market', 'Side', 'Size', 'Status', 'Submitted'], rows)}</div><aside>${panel('Account balance', `<strong class="large-value">${esc(accountBalance)}</strong><p class="muted-copy">${esc(currency)}</p>`)}</aside></div>`;
   } else if (pageKey === 'tradinghistory') {
-    const rows = trades.slice().sort(byTime).map((item) => `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
-    content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Status', 'Date'], rows);
+    const rows = trades.slice().sort(byTime).map((item) => { const pnl = item.realizedPnl ?? item.unrealizedPnl; return `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${pnl == null ? '—' : esc(money(pnl, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.closedAt || item.createdAt))}</td></tr>`; });
+    content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Realized P/L', 'Status', 'Date'], rows);
   } else if (pageKey === 'accounthistory') {
     const outstandingRequests = userRequests.filter((item) => !item.resultId);
-    const rows = [...transactions, ...outstandingRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.completedAt || item.createdAt))}</td></tr>`);
-    content.innerHTML = renderTable('Transactions', ['Type', 'Details', 'Amount', 'Status', 'Date'], rows);
+    const rows = [...transactions, ...outstandingRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.completedAt || item.createdAt))}</td></tr>`);
+    content.innerHTML = renderTable('Transactions', ['Type', 'Details', 'Amount / P/L', 'Status', 'Date'], rows);
   } else if (pageKey === 'copy-trading') {
     const strategies = await listPublicRecords('copyStrategies');
     content.innerHTML = strategies.length ? `<div class="feature-grid">${strategies.map((item) => `<article class="feature-card glass-panel rise-in"><span class="status-tag">${esc(item.status || 'Available')}</span><h2>${esc(item.name || 'Strategy')}</h2><p>${esc(item.description || '')}</p><div class="feature-metrics"><div><small>Risk level</small><b>${esc(item.riskLevel || '—')}</b></div><div><small>Provider</small><b>${esc(item.provider || '—')}</b></div></div></article>`).join('')}</div>` : empty('No copy strategies are available.');

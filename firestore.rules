@@ -210,9 +210,9 @@ service cloud.firestore {
         allow create: if isAdmin()
           && transactionId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
-          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'method', 'destination', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy', 'manual'])
+          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'type', 'amount', 'pnl', 'currency', 'status', 'method', 'destination', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy', 'manual'])
           && request.resource.data.uid == uid
-          && request.resource.data.type in ['deposit', 'withdrawal']
+          && request.resource.data.type in ['deposit', 'withdrawal', 'profit_loss']
           && request.resource.data.amount is number
           && request.resource.data.amount > 0
           && accountCurrency(uid, request.resource.data.currency)
@@ -228,7 +228,14 @@ service cloud.firestore {
           && balanceBeforeMatches(uid, request.resource.data.balanceBefore, request.resource.data.currency)
           && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == request.resource.data.balanceAfter
           && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency
-          && ((request.resource.data.type == 'deposit'
+          && ((request.resource.data.type == 'profit_loss'
+              && request.resource.data.manual == true
+              && request.resource.data.processedBy == 'admin-manual'
+              && request.resource.data.pnl is number
+              && request.resource.data.pnl != 0
+              && request.resource.data.balanceAfter == request.resource.data.balanceBefore + request.resource.data.pnl
+              && request.resource.data.balanceAfter >= 0)
+            || (request.resource.data.type == 'deposit'
               && (request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment']
                 || (request.resource.data.manual == true && request.resource.data.get('method', '') == 'manual'))
               && request.resource.data.balanceAfter == request.resource.data.balanceBefore + request.resource.data.amount)
@@ -245,7 +252,7 @@ service cloud.firestore {
       allow create: if isAdmin()
           && tradeId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
-          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy', 'manual'])
+          && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'unrealizedPnl', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy', 'manual'])
           && request.resource.data.uid == uid
           && request.resource.data.type == 'trade'
           && request.resource.data.marketId is string
@@ -264,6 +271,7 @@ service cloud.firestore {
           && request.resource.data.openedAt is timestamp
           && request.resource.data.createdAt is timestamp
           && request.resource.data.processedBy is string
+          && (!('unrealizedPnl' in request.resource.data) || request.resource.data.unrealizedPnl is number)
           && ((requestMatchesAfter(uid, tradeId, 'trade', 'accepted', 'trades')
             && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.marketId == request.resource.data.marketId
             && getAfter(/databases/$(database)/documents/users/$(uid)/requests/$(tradeId)).data.symbol == request.resource.data.symbol
@@ -274,7 +282,7 @@ service cloud.firestore {
             || (request.resource.data.manual == true && request.resource.data.processedBy == 'admin-manual'));
       allow create: if owns(uid)
         && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
-        && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy', 'manual'])
+        && request.resource.data.keys().hasOnly(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'duration', 'entryPrice', 'unrealizedPnl', 'takeProfit', 'stopLoss', 'status', 'openedAt', 'createdAt', 'processedBy', 'manual'])
         && request.resource.data.uid == uid
         && request.resource.data.requestId == tradeId
         && request.resource.data.type == 'trade'
@@ -294,11 +302,19 @@ service cloud.firestore {
         && request.resource.data.openedAt is timestamp
         && request.resource.data.createdAt is timestamp
         && request.resource.data.processedBy == 'member-balance'
+        && (!('unrealizedPnl' in request.resource.data) || request.resource.data.unrealizedPnl is number)
         && get(/databases/$(database)/documents/users/$(uid)).data.balance is number
         && get(/databases/$(database)/documents/users/$(uid)).data.balance >= request.resource.data.amount
         && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == get(/databases/$(database)/documents/users/$(uid)).data.balance - request.resource.data.amount
         && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency;
-        allow update, delete: if false;
+      allow update: if isAdmin()
+        && request.resource.data.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['realizedPnl', 'unrealizedPnl', 'status', 'closedAt', 'closePrice', 'updatedAt', 'processedBy'])
+        && resource.data.status == 'open'
+        && request.resource.data.status == 'closed'
+        && request.resource.data.realizedPnl is number
+        && request.resource.data.processedBy == 'admin-manual';
+        allow delete: if false;
       }
 
       match /settings/{settingId} {
@@ -323,7 +339,7 @@ service cloud.firestore {
         && request.resource.data.email == 'admin@vertixtrades.com'
         && request.resource.data.role == 'admin'
         && request.resource.data.active == true;
-      allow update, delete: if false;
+      allow delete: if false;
     }
 
     match /signals/{id} {
