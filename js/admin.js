@@ -10,6 +10,8 @@ import {
   updateUserRequest,
   processUserRequest,
   saveFundingMethod,
+  getPlatformSettings,
+  savePlatformSettings,
   updateMemberKyc
 } from './firebase.js';
 
@@ -23,6 +25,7 @@ const MARKET_CATEGORIES = [
 ];
 const validTradingViewSymbol = (value) => !value || /^[A-Z0-9][A-Z0-9._:-]*$/i.test(value.trim());
 const validMarketSymbol = (value) => /^[A-Z0-9][A-Z0-9._:-]{0,39}$/i.test(value.trim());
+const catalogCache = { plans: [], digitalAssets: [] };
 
 function status(message, tone = 'error') {
   const node = qs('#admin-status');
@@ -67,6 +70,10 @@ function marketRow(item) {
   </article>`;
 }
 
+function catalogRow(collectionName, item, title) {
+  return `<div class="admin-list-row" data-catalog-row="${esc(collectionName)}" data-id="${esc(item.id)}"><div><b>${label(title)}</b><small>${label(item.status || 'Available')}</small></div><div class="crud-actions"><button type="button" data-catalog-edit="${esc(collectionName)}" data-id="${esc(item.id)}">Edit</button><button type="button" data-catalog-delete="${esc(collectionName)}" data-id="${esc(item.id)}">Remove</button></div></div>`;
+}
+
 function requestActions(item) {
   const uid = esc(item.uid || '');
   const id = esc(item.id);
@@ -100,13 +107,17 @@ async function seedStarterContent() {
 
 async function render() {
   await seedStarterContent();
-  const [users, signals, assets, fundingMethods, requests] = await Promise.all([
+  const [users, signals, assets, fundingMethods, plans, digitalAssets, requests] = await Promise.all([
     listRecords('users'),
     listRecords('signals'),
     listRecords('marketAssets'),
     listRecords('fundingMethods'),
+    listRecords('plans'),
+    listRecords('digitalAssets'),
     listAllUserRequests()
   ]);
+  catalogCache.plans = plans;
+  catalogCache.digitalAssets = digitalAssets;
 
   qs('#member-count').textContent = String(users.length);
   qs('#signal-count').textContent = String(signals.length);
@@ -123,6 +134,8 @@ async function render() {
 
   qs('#assets-list').innerHTML = assets.length ? assets.slice().sort((a, b) => String(a.displayName || '').localeCompare(String(b.displayName || ''))).map(marketRow).join('') : empty('No market assets are listed.');
   qs('#funding-list').innerHTML = fundingMethods.length ? fundingMethods.map((item) => `<div class="admin-list-row"><div><b>${label(item.label || item.method)}</b><small>${label(item.currency || 'Any currency')} · ${item.enabled === true ? 'Enabled' : 'Disabled'}</small></div><span class="status-pill">${label(item.method)}</span></div>`).join('') : empty('No deposit methods configured.');
+  qs('#plans-list').innerHTML = plans.length ? plans.map((item) => catalogRow('plans', item, `${item.name || 'Plan'} · ${item.price || 0} ${item.currency || ''}`)).join('') : empty('No subscription plans configured.');
+  qs('#digital-assets-list').innerHTML = digitalAssets.length ? digitalAssets.map((item) => catalogRow('digitalAssets', item, `${item.name || 'Digital asset'} · ${item.edition || ''}`)).join('') : empty('No digital assets configured.');
   qs('#users-list').innerHTML = users.length ? users.map((item) => `
     <div class="admin-list-row admin-user-row">
       <div><b>${label(item.legalName)}</b><small>${label(item.email)}</small></div>
@@ -176,11 +189,28 @@ async function loadFundingForm(method) {
   fillFundingForm(records.find((item) => item.id === method || item.method === method) || { method });
 }
 
+function fillPlatformSettings(settings = {}) {
+  const form = qs('#platform-settings-form');
+  if (!form) return;
+  const defaults = { companyName: 'Vertix Trade', supportEmail: 'support@vertixtrades.com', depositMin: 10, depositMax: 100000, withdrawalMin: 10, withdrawalMax: 100000, depositFeePercent: 0, withdrawalFeePercent: 1 };
+  for (const [name, fallback] of Object.entries(defaults)) form.elements.namedItem(name).value = settings[name] ?? fallback;
+}
+
+function fillCatalogForm(collectionName, record) {
+  const form = qs(`[data-catalog-form="${collectionName}"]`);
+  if (!form) return;
+  for (const field of ['recordId', 'name', 'price', 'currency', 'billingPeriod', 'status', 'edition', 'category', 'description']) {
+    if (form.elements.namedItem(field)) form.elements.namedItem(field).value = record[field] ?? '';
+  }
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 async function start() {
   const admin = await requireAdmin();
   if (!admin) return;
   qs('#admin-email').textContent = admin.email || 'Administrator';
   await loadFundingForm('bank_transfer');
+  fillPlatformSettings(await getPlatformSettings());
 
   qs('#signal-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -239,6 +269,41 @@ async function start() {
     }
   });
 
+  qs('#platform-settings-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    try {
+      await savePlatformSettings({
+        companyName: String(data.get('companyName') || '').trim(),
+        supportEmail: String(data.get('supportEmail') || '').trim(),
+        ...Object.fromEntries(['depositMin', 'depositMax', 'withdrawalMin', 'withdrawalMax', 'depositFeePercent', 'withdrawalFeePercent'].map((name) => [name, Number(data.get(name))]))
+      });
+      status('Platform settings saved.', 'success');
+    } catch (error) {
+      status(error.message || 'Platform settings could not be saved.');
+    }
+  });
+
+  document.querySelectorAll('[data-catalog-form]').forEach((form) => form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const collectionName = form.dataset.catalogForm;
+    const data = new FormData(form);
+    const recordId = String(data.get('recordId') || '').trim();
+    const payload = { name: String(data.get('name') || '').trim(), status: String(data.get('status') || 'Available'), description: String(data.get('description') || '').trim() };
+    if (collectionName === 'plans') Object.assign(payload, { price: Number(data.get('price')), currency: String(data.get('currency') || 'USD').trim().toUpperCase(), billingPeriod: String(data.get('billingPeriod') || '').trim() });
+    else Object.assign(payload, { edition: String(data.get('edition') || '').trim(), category: String(data.get('category') || '').trim() });
+    try {
+      if (recordId) await updateRecord(collectionName, recordId, payload);
+      else await createRecord(collectionName, payload);
+      form.reset();
+      form.elements.namedItem('recordId').value = '';
+      await render();
+      status(`${collectionName === 'plans' ? 'Subscription plan' : 'Digital asset'} saved.`, 'success');
+    } catch (error) {
+      status(error.message || 'Catalog record could not be saved.');
+    }
+  }));
+
   document.addEventListener('submit', async (event) => {
     const editForm = event.target.closest('[data-market-edit]');
     if (editForm) {
@@ -289,6 +354,25 @@ async function start() {
       const { signOutUser } = await import('./firebase.js');
       await signOutUser();
       window.location.assign('/login.html');
+      return;
+    }
+    const catalogEdit = event.target.closest('[data-catalog-edit]');
+    if (catalogEdit) {
+      const records = catalogCache[catalogEdit.dataset.catalogEdit] || [];
+      const record = records.find((item) => item.id === catalogEdit.dataset.id);
+      if (record) fillCatalogForm(catalogEdit.dataset.catalogEdit, record);
+      return;
+    }
+    const catalogDelete = event.target.closest('[data-catalog-delete]');
+    if (catalogDelete) {
+      if (!window.confirm('Remove this catalog record?')) return;
+      try {
+        await deleteRecord(catalogDelete.dataset.catalogDelete, catalogDelete.dataset.id);
+        await render();
+        status('Catalog record removed.', 'success');
+      } catch (error) {
+        status(error.message || 'Catalog record could not be removed.');
+      }
       return;
     }
     const kycButton = event.target.closest('[data-kyc-status]');

@@ -3,6 +3,7 @@ import {
   requireMember,
   listPublicRecords,
   listFundingMethods,
+  getPlatformSettings,
   listUserRecords,
   createUserRequest,
   openTrade,
@@ -33,6 +34,7 @@ let session;
 let currency = '';
 let activeMarkets = [];
 let fundingMethods = [];
+let platformSettings = {};
 let tradingViewPromise;
 let chartCounter = 0;
 
@@ -115,13 +117,17 @@ function requestForm(type) {
   const methodOptions = fundingMethods.map((item) => [item.id, item.label || item.method || item.id]);
   if (isDeposit && !methodOptions.length) return panel('Deposit methods', empty('Deposit methods are not configured yet. Please contact support.'));
   const firstMethod = fundingMethods[0];
+  const minimum = Number(platformSettings[isDeposit ? 'depositMin' : 'withdrawalMin']) || 0.01;
+  const maximum = Number(platformSettings[isDeposit ? 'depositMax' : 'withdrawalMax']);
+  const amountLimits = `min="${minimum}" step="0.01" ${Number.isFinite(maximum) && maximum > 0 ? `max="${maximum}"` : ''} required`;
+  const fee = Number(platformSettings[isDeposit ? 'depositFeePercent' : 'withdrawalFeePercent']) || 0;
   const form = `<form method="post" class="standard-form" data-request-form="${type}">
-    ${input(`Amount (${currency})`, 'amount', 'number', 'min="0.01" step="0.01" required')}
+    ${input(`Amount (${currency})`, 'amount', 'number', amountLimits)}
     ${isDeposit
       ? `${fieldSelect('Funding method', 'method', methodOptions, 'required data-funding-method')}<div class="funding-instructions" data-funding-instructions>${fundingDetails(firstMethod)}</div>`
       : input('Saved destination reference', 'destination', 'text', 'maxlength="100" required')}
     <button class="button button-primary" type="submit">Submit ${isDeposit ? 'deposit' : 'withdrawal'} request ↗</button>
-    <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'This request does not send funds. An administrator records it only after the external withdrawal is sent.'}</p>
+    <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'This request does not send funds. An administrator records it only after the external withdrawal is sent.'} Standard fee: ${esc(fee)}%.</p>
     <p class="form-status" aria-live="polite"></p>
   </form>`;
   return panel(labels, form);
@@ -133,7 +139,9 @@ async function renderPage() {
   const profile = session.profile;
   currency = profile.preferredCurrency || '';
   activeMarkets = (await listPublicRecords('marketAssets')).filter((item) => item.active === true);
-  fundingMethods = (pageKey === 'deposits') ? await listFundingMethods() : [];
+  [fundingMethods, platformSettings] = pageKey === 'deposits' || pageKey === 'withdrawals'
+    ? await Promise.all([pageKey === 'deposits' ? listFundingMethods() : Promise.resolve([]), getPlatformSettings()])
+    : [[], {}];
   const [requests, trades, transactions] = await Promise.all([
     listUserRecords(uid, 'requests'),
     listUserRecords(uid, 'trades'),
@@ -288,6 +296,14 @@ function bindForms() {
       if (fields.amount !== undefined && (!Number.isFinite(fields.amount) || fields.amount <= 0)) {
         setFormStatus(form, 'Enter an amount greater than zero.');
         return;
+      }
+      if (type === 'deposit' || type === 'withdrawal') {
+        const min = Number(platformSettings[type === 'deposit' ? 'depositMin' : 'withdrawalMin']) || 0.01;
+        const max = Number(platformSettings[type === 'deposit' ? 'depositMax' : 'withdrawalMax']);
+        if (fields.amount < min || (Number.isFinite(max) && max > 0 && fields.amount > max)) {
+          setFormStatus(form, `Enter an amount between ${min} and ${max > 0 ? max : 'the configured maximum'}.`);
+          return;
+        }
       }
       if (type === 'trade' && (!Number.isFinite(fields.leverage) || fields.leverage < 1 || fields.leverage > 10)) {
         setFormStatus(form, 'Select leverage between 1× and 10×.');

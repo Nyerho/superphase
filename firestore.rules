@@ -78,6 +78,20 @@ service cloud.firestore {
         && (amount == 0 || !('balanceCurrency' in profile) || profile.balanceCurrency == currency);
     }
 
+    function depositAmountAllowed(amount) {
+      let settingsPath = /databases/$(database)/documents/platformSettings/global;
+      return !exists(settingsPath)
+        || (amount >= get(settingsPath).data.get('depositMin', 0.01)
+          && (get(settingsPath).data.get('depositMax', 0) <= 0 || amount <= get(settingsPath).data.get('depositMax', 0)));
+    }
+
+    function withdrawalAmountAllowed(amount) {
+      let settingsPath = /databases/$(database)/documents/platformSettings/global;
+      return !exists(settingsPath)
+        || (amount >= get(settingsPath).data.get('withdrawalMin', 0.01)
+          && (get(settingsPath).data.get('withdrawalMax', 0) <= 0 || amount <= get(settingsPath).data.get('withdrawalMax', 0)));
+    }
+
     match /users/{uid} {
       allow get: if owns(uid) || isAdmin();
       allow list: if isAdmin();
@@ -154,6 +168,8 @@ service cloud.firestore {
             ? accountCurrency(uid, request.resource.data.currency)
             : (!('currency' in request.resource.data) || accountCurrency(uid, request.resource.data.currency)))
           && (request.resource.data.type != 'deposit' || request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment'])
+          && (request.resource.data.type != 'deposit' || depositAmountAllowed(request.resource.data.amount))
+          && (request.resource.data.type != 'withdrawal' || withdrawalAmountAllowed(request.resource.data.amount))
           && (request.resource.data.type != 'withdrawal' || (request.resource.data.get('destination', '') is string && request.resource.data.get('destination', '').size() >= 1 && request.resource.data.get('destination', '').size() <= 100))
           && (request.resource.data.type != 'loan' || request.resource.data.get('purpose', '') in ['business', 'personal', 'other'])
           && (request.resource.data.type != 'trade' || (
@@ -323,6 +339,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /fundingMethods/{id} {
+      allow read: if verified() || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+    match /platformSettings/{id} {
       allow read: if verified() || isAdmin();
       allow create, update, delete: if isAdmin();
     }

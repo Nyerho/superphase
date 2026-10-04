@@ -12,6 +12,41 @@ import {
 
 const qs = (selector, root = document) => root.querySelector(selector);
 
+const LEGAL_COPY = {
+  terms: {
+    title: 'Terms of Service',
+    body: `<p><b>Effective date: 4 October 2026</b></p><p>These Terms govern access to Vertix Trade, a market-information and account-services platform operated by Vertix Trade in Brazil. By creating an account or using the platform, you agree to use it lawfully, provide accurate information and protect your credentials.</p><p>Market information, signals, charts and research are provided for informational purposes and are not financial, investment, tax or legal advice. Trading involves substantial risk, including loss of capital. You remain responsible for your decisions, orders and account activity.</p><p>Deposits, withdrawals, subscriptions and any execution service are subject to the applicable account status, risk controls, administrator review, provider rules and applicable law. We may reject, suspend or reverse activity required by law, fraud controls, sanctions screening or operational safeguards.</p><p>You must not use the platform for fraud, market manipulation, money laundering, sanctions evasion, unauthorized access or any unlawful purpose. You are responsible for keeping your password and account access secure.</p><p>These terms are a general product draft and must be reviewed and adapted by qualified Brazilian counsel before live financial operations. Contact <a href="mailto:support@vertixtrades.com">support@vertixtrades.com</a> with questions.</p>`
+  },
+  privacy: {
+    title: 'Privacy Policy',
+    body: `<p><b>Effective date: 4 October 2026</b></p><p>Vertix Trade processes personal data to create and secure accounts, provide platform features, maintain transaction records, prevent fraud, support customers and comply with legal obligations. The platform may process identity, contact, residential, account, device and activity information.</p><p>Data is stored and processed using Firebase and other service providers configured by Vertix Trade. We share data only with providers and authorities where needed to provide the service, protect users, prevent abuse, process transactions or comply with law.</p><p>We retain information for as long as necessary for the stated purposes, security, dispute resolution, accounting and applicable regulatory obligations. We apply access controls and reasonable safeguards, but no internet system is risk-free.</p><p>For Brazil, requests under applicable data-protection law, including access, correction and deletion where legally available, may be sent to <a href="mailto:support@vertixtrades.com">support@vertixtrades.com</a>. Some records may need to be retained for legal or financial-control reasons.</p><p>This is a product draft, not legal advice. It must be reviewed by qualified Brazilian privacy counsel and supplemented with the final controller identity, retention schedule and data-protection officer details before production.</p>`
+  }
+};
+
+function initializeLegalModals() {
+  if (document.getElementById('legal-modal')) return;
+  document.body.insertAdjacentHTML('beforeend', `<div class="legal-modal" id="legal-modal" hidden role="dialog" aria-modal="true" aria-labelledby="legal-modal-title"><div class="legal-modal-backdrop" data-legal-close></div><section class="legal-modal-card glass-panel"><button class="legal-modal-close" type="button" aria-label="Close" data-legal-close>×</button><span class="eyebrow">VERTIX TRADE / LEGAL</span><h2 id="legal-modal-title"></h2><div id="legal-modal-body"></div></section></div>`);
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-legal-modal]');
+    const modal = document.getElementById('legal-modal');
+    if (trigger && modal) {
+      event.preventDefault();
+      const copy = LEGAL_COPY[trigger.dataset.legalModal];
+      if (!copy) return;
+      qs('#legal-modal-title').textContent = copy.title;
+      qs('#legal-modal-body').innerHTML = copy.body;
+      modal.hidden = false;
+      document.body.classList.add('legal-modal-open');
+    }
+    if (event.target.closest('[data-legal-close]') && modal) {
+      modal.hidden = true;
+      document.body.classList.remove('legal-modal-open');
+    }
+  });
+}
+
+initializeLegalModals();
+
 function setStatus(form, message, tone = 'error') {
   const target = qs('.form-status', form);
   if (!target) return;

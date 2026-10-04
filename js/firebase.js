@@ -32,7 +32,7 @@ const PUBLIC_COLLECTIONS = new Set([
   'digitalAssets', 'news', 'marketCalendar'
 ]);
 const ADMIN_COLLECTIONS = new Set([
-  ...PUBLIC_COLLECTIONS, 'users', 'auditLog', 'fundingMethods'
+  ...PUBLIC_COLLECTIONS, 'users', 'auditLog', 'fundingMethods', 'platformSettings'
 ]);
 const USER_SUBCOLLECTIONS = new Set([
   'requests', 'trades', 'transactions', 'referrals', 'watchlist', 'settings'
@@ -274,6 +274,19 @@ export async function saveFundingMethod(id, data) {
   const allowed = ['method', 'label', 'enabled', 'currency', 'accountName', 'accountNumber', 'bankName', 'routingNumber', 'iban', 'swift', 'network', 'walletAddress', 'paymentUrl', 'instructions'];
   const safeData = Object.fromEntries(Object.entries(data).filter(([key]) => allowed.includes(key)));
   await setDoc(doc(firestore, 'fundingMethods', id), { ...safeData, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function getPlatformSettings() {
+  const { db: firestore } = await firebaseReady();
+  const snapshot = await getDoc(doc(firestore, 'platformSettings', 'global'));
+  return snapshot.exists() ? snapshot.data() : {};
+}
+
+export async function savePlatformSettings(data) {
+  const { db: firestore } = await firebaseReady();
+  const allowed = ['companyName', 'supportEmail', 'depositMin', 'depositMax', 'withdrawalMin', 'withdrawalMax', 'depositFeePercent', 'withdrawalFeePercent'];
+  const safeData = Object.fromEntries(Object.entries(data).filter(([key]) => allowed.includes(key)));
+  await setDoc(doc(firestore, 'platformSettings', 'global'), { ...safeData, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function listUserRecords(uid, subcollection) {
