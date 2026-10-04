@@ -374,6 +374,20 @@ export async function listRecords(collectionName) {
   return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
 }
 
+export async function recordAdminAudit(action, outcome = 'success', details = {}) {
+  const { db: firestore, auth: currentAuth } = await firebaseReady();
+  const user = currentAuth.currentUser;
+  if (!user) return;
+  await addDoc(collection(firestore, 'auditLog'), {
+    uid: user.uid,
+    actorEmail: user.email || '',
+    action: String(action || 'Admin operation').slice(0, 180),
+    outcome: outcome === 'success' ? 'success' : 'failure',
+    details: String(details.page || window.location.pathname || '').slice(0, 120),
+    createdAt: serverTimestamp()
+  });
+}
+
 export async function listAllUserRequests() {
   const { db: firestore } = await firebaseReady();
   const snapshot = await getDocs(collectionGroup(firestore, 'requests'));

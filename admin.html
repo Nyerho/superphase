@@ -23,6 +23,7 @@
         <a href="#catalog-admin"><span>◇</span> Plans and digital assets</a>
         <a href="#users-admin"><span>◉</span> Members</a>
         <a href="#requests-admin"><span>⇄</span> Requests</a>
+        <a href="#history-admin"><span>◷</span> Global history</a>
         <a href="index.html"><span>↩</span> Public site</a>
         <a href="#" data-logout><span>↩</span> Sign out</a>
       </nav>
@@ -38,6 +39,11 @@
         <article class="admin-stat glass-panel"><small>Signals</small><strong id="signal-count">—</strong></article>
         <article class="admin-stat glass-panel"><small>Market assets</small><strong id="asset-count">—</strong></article>
         <article class="admin-stat glass-panel"><small>Submitted requests</small><strong id="request-count">—</strong></article>
+      </section>
+      <section class="admin-panel glass-panel" id="history-admin">
+        <div class="panel-title"><h2>Global Admin history</h2><button class="button button-quiet button-small" id="refresh-history" type="button">Refresh history</button></div>
+        <p class="admin-workflow-note">Successful and failed actions performed from this Admin workspace are recorded here with the acting account and time.</p>
+        <div class="admin-audit-list" id="audit-history"><div class="empty-state">Loading Admin history…</div></div>
       </section>
       <section class="admin-content-grid admin-content-grid-wide">
         <article class="admin-panel glass-panel" id="signals-admin">

@@ -98,3 +98,8 @@
   .site-header .desktop-nav.mobile-open a:last-child{border-bottom:0}
 }
 .sidebar-scrim{cursor:pointer}
+
+.admin-audit-list{display:grid;gap:8px;max-height:430px;overflow:auto}
+.admin-audit-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:11px 12px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.02);font-size:10px}
+.admin-audit-row div{min-width:0}.admin-audit-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.admin-audit-row small,.admin-audit-row time{color:var(--muted);font:400 8px 'DM Mono',monospace}.admin-audit-row time{white-space:nowrap}.audit-outcome{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-weight:800}.audit-success{background:rgba(134,227,176,.13);color:#86e3b0}.audit-failure{background:rgba(255,130,90,.13);color:#ffb08c}
+@media(max-width:620px){.admin-audit-row{grid-template-columns:28px 1fr}.admin-audit-row time{grid-column:2}}

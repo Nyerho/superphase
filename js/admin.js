@@ -17,7 +17,8 @@ import {
   addManualTrade,
   addManualTransaction,
   applyTradePnl,
-  updateMemberKyc
+  updateMemberKyc,
+  recordAdminAudit
 } from './firebase.js';
 
 const qs = (selector) => document.querySelector(selector);
@@ -77,6 +78,20 @@ function status(message, tone = 'error') {
   if (message) {
     releaseOperationButton();
     if (operationWasActive || tone === 'success') showOperation(message, tone === 'success' ? 'success' : 'error');
+    recordAdminAudit(message, tone === 'success' ? 'success' : 'failure', { page: window.location.pathname }).then(() => renderAuditHistory()).catch((error) => console.warn('Audit event could not be recorded', error));
+  }
+}
+
+async function renderAuditHistory(records = null) {
+  const target = qs('#audit-history');
+  if (!target) return;
+  try {
+    const history = records || await listRecords('auditLog');
+    const rows = history.slice().sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 80);
+    target.innerHTML = rows.length ? rows.map((item) => `<div class="admin-audit-row"><span class="audit-outcome ${item.outcome === 'success' ? 'audit-success' : 'audit-failure'}">${item.outcome === 'success' ? '✓' : '×'}</span><div><b>${label(item.action)}</b><small>${label(item.actorEmail)} · ${label(item.details || 'Admin workspace')}</small></div><time>${esc(timeText(item.createdAt))}</time></div>`).join('') : empty('No Admin activity has been recorded yet.');
+  } catch (error) {
+    target.innerHTML = empty('Audit history could not be loaded.');
+    console.warn('Audit history could not be read', error);
   }
 }
 
@@ -159,14 +174,15 @@ async function render() {
   ensureStarterSeed();
   const errors = [];
   const safe = (name, loader, fallback) => loader().catch((error) => { errors.push(name); console.error(`[Vertix Admin] ${name} failed`, error); return fallback; });
-  const [users, signals, assets, fundingMethods, plans, digitalAssets, requests] = await Promise.all([
+  const [users, signals, assets, fundingMethods, plans, digitalAssets, requests, auditRecords] = await Promise.all([
     safe('users', () => listRecords('users'), []),
     safe('signals', () => listRecords('signals'), starterRecords('signals')),
     safe('marketAssets', () => listRecords('marketAssets'), starterRecords('marketAssets')),
     safe('fundingMethods', () => listRecords('fundingMethods'), []),
     safe('plans', () => listRecords('plans'), starterRecords('plans')),
     safe('digitalAssets', () => listRecords('digitalAssets'), starterRecords('digitalAssets')),
-    safe('member requests', () => listAllUserRequests(), [])
+    safe('member requests', () => listAllUserRequests(), []),
+    safe('audit history', () => listRecords('auditLog'), [])
   ]);
   const members = users.filter((item) => (item.uid || item.id) !== SYSTEM_ADMIN_UID);
   catalogCache.plans = plans;
@@ -176,6 +192,7 @@ async function render() {
   qs('#signal-count').textContent = String(signals.length);
   qs('#asset-count').textContent = String(assets.length);
   qs('#request-count').textContent = String(requests.filter((item) => item.status === 'submitted').length);
+  renderAuditHistory(auditRecords);
 
   qs('#signals-list').innerHTML = signals.length ? signals.map((item) => `
     <div class="admin-list-row admin-record-row" data-id="${esc(item.id)}">
@@ -296,6 +313,7 @@ async function loadPnlTrades(uid) {
 
 async function start() {
   qs('#admin-operation-close')?.addEventListener('click', () => { qs('#admin-operation-modal').hidden = true; });
+  qs('#refresh-history')?.addEventListener('click', () => renderAuditHistory());
   document.addEventListener('submit', (event) => {
     const button = event.target.querySelector('button[type="submit"]');
     if (button) lockOperationButton(button);
