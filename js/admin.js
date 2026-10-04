@@ -30,6 +30,7 @@ const validTradingViewSymbol = (value) => !value || /^[A-Z0-9][A-Z0-9._:-]*$/i.t
 const validMarketSymbol = (value) => /^[A-Z0-9][A-Z0-9._:-]{0,39}$/i.test(value.trim());
 const catalogCache = { plans: [], digitalAssets: [] };
 const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
+let starterSeedPromise;
 
 function status(message, tone = 'error') {
   const node = qs('#admin-status');
@@ -109,16 +110,23 @@ async function seedStarterContent() {
   }
 }
 
+function ensureStarterSeed() {
+  if (!starterSeedPromise) starterSeedPromise = seedStarterContent().catch((error) => { console.warn('Starter content seeding skipped', error); });
+  return starterSeedPromise;
+}
+
 async function render() {
-  await seedStarterContent();
+  ensureStarterSeed();
+  const errors = [];
+  const safe = (loader, fallback) => loader().catch((error) => { errors.push(error); return fallback; });
   const [users, signals, assets, fundingMethods, plans, digitalAssets, requests] = await Promise.all([
-    listRecords('users'),
-    listRecords('signals'),
-    listRecords('marketAssets'),
-    listRecords('fundingMethods'),
-    listRecords('plans'),
-    listRecords('digitalAssets'),
-    listAllUserRequests()
+    safe(() => listRecords('users'), []),
+    safe(() => listRecords('signals'), starterRecords('signals')),
+    safe(() => listRecords('marketAssets'), starterRecords('marketAssets')),
+    safe(() => listRecords('fundingMethods'), []),
+    safe(() => listRecords('plans'), starterRecords('plans')),
+    safe(() => listRecords('digitalAssets'), starterRecords('digitalAssets')),
+    safe(() => listAllUserRequests(), [])
   ]);
   const members = users.filter((item) => (item.uid || item.id) !== SYSTEM_ADMIN_UID);
   catalogCache.plans = plans;
@@ -162,6 +170,7 @@ async function render() {
       ${requestActions(item)}
     </article>`;
   }).join('') : empty('No member requests have been submitted.');
+  if (errors.length) status('Some Admin data could not be read. Publish the latest firestore.rules and check the browser console for the affected section.', 'error');
 }
 
 async function removeRecord(collectionName, id) {
