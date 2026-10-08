@@ -565,7 +565,22 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
       };
     } else if (request.type === 'deposit' || request.type === 'withdrawal') {
       if (request.type === 'deposit' && !['bank_transfer', 'digital_asset', 'card_payment'].includes(request.method)) throw new Error('Choose a valid deposit method before recording receipt.');
-      if (request.type === 'withdrawal' && (typeof request.destination !== 'string' || !request.destination.trim())) throw new Error('Add a withdrawal destination before recording payment.');
+      if (request.type === 'withdrawal') {
+        const destination = typeof request.destination === 'string' ? request.destination.trim() : '';
+        if (!destination) throw new Error('Add a withdrawal destination before recording payment.');
+        if (request.method === 'bank_transfer'
+          && (typeof request.bankName !== 'string' || !request.bankName.trim()
+            || typeof request.accountHolder !== 'string' || !request.accountHolder.trim())) {
+          throw new Error('This bank withdrawal is missing its bank name or account holder.');
+        }
+        if (request.method === 'crypto_wallet'
+          && (typeof request.network !== 'string' || !request.network.trim() || destination.length < 8)) {
+          throw new Error('This crypto withdrawal is missing its asset/network.');
+        }
+        if (request.method && !['bank_transfer', 'crypto_wallet'].includes(request.method)) {
+          throw new Error('This withdrawal has an unsupported payout method.');
+        }
+      }
       const storedBalance = profile.balance == null ? 0 : profile.balance;
       const balanceCurrency = profile.balanceCurrency || profile.preferredCurrency;
       if (typeof storedBalance !== 'number' || !Number.isFinite(storedBalance) || storedBalance < 0) throw new Error('The member balance requires administrator review before this transaction can be posted.');
