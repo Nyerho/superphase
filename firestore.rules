@@ -99,6 +99,38 @@ service cloud.firestore {
           && (get(settingsPath).data.get('withdrawalMax', 0) <= 0 || amount <= get(settingsPath).data.get('withdrawalMax', 0)));
     }
 
+    function validWithdrawalDetails(data) {
+      return data.get('method', '') == 'bank_transfer'
+        ? (data.keys().hasAll(['method', 'destination', 'bankName', 'accountHolder'])
+          && data.destination is string
+          && data.destination.size() >= 4
+          && data.destination.size() <= 200
+          && data.bankName is string
+          && data.bankName.size() >= 2
+          && data.bankName.size() <= 120
+          && data.accountHolder is string
+          && data.accountHolder.size() >= 2
+          && data.accountHolder.size() <= 120
+          && (!('swiftBic' in data)
+            || (data.swiftBic is string
+              && data.swiftBic.size() <= 11
+              && (data.swiftBic.size() == 0 || data.swiftBic.matches('^[A-Za-z0-9]{8}([A-Za-z0-9]{3})?$'))))
+          && !('network' in data)
+          && !('memoTag' in data))
+        : data.get('method', '') == 'crypto_wallet'
+          && data.keys().hasAll(['method', 'destination', 'network'])
+          && data.destination is string
+          && data.destination.size() >= 8
+          && data.destination.size() <= 200
+          && data.network is string
+          && data.network.size() >= 2
+          && data.network.size() <= 80
+          && (!('memoTag' in data) || (data.memoTag is string && data.memoTag.size() <= 100))
+          && !('bankName' in data)
+          && !('accountHolder' in data)
+          && !('swiftBic' in data);
+    }
+
     match /users/{uid} {
       allow get: if owns(uid) || isAdmin() || systemAdminIdentity();
       allow list: if isAdmin() || systemAdminIdentity();
@@ -167,7 +199,8 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'uid', 'type', 'status', 'amount', 'currency', 'marketId', 'symbol', 'side',
             'leverage', 'duration', 'takeProfit', 'stopLoss', 'method',
-            'destination', 'purpose', 'message', 'subject', 'planId', 'createdAt'
+            'destination', 'bankName', 'accountHolder', 'swiftBic', 'network', 'memoTag',
+            'purpose', 'message', 'subject', 'planId', 'createdAt'
           ])
           && (!('amount' in request.resource.data) || (request.resource.data.amount is number && request.resource.data.amount >= 0))
           && (request.resource.data.type in ['support', 'plan'] || (request.resource.data.amount is number && request.resource.data.amount > 0))
@@ -177,7 +210,7 @@ service cloud.firestore {
           && (request.resource.data.type != 'deposit' || request.resource.data.get('method', '') in ['bank_transfer', 'digital_asset', 'card_payment'])
           && (request.resource.data.type != 'deposit' || depositAmountAllowed(request.resource.data.amount))
           && (request.resource.data.type != 'withdrawal' || withdrawalAmountAllowed(request.resource.data.amount))
-          && (request.resource.data.type != 'withdrawal' || (request.resource.data.get('destination', '') is string && request.resource.data.get('destination', '').size() >= 1 && request.resource.data.get('destination', '').size() <= 100))
+          && (request.resource.data.type != 'withdrawal' || validWithdrawalDetails(request.resource.data))
           && (request.resource.data.type != 'loan' || request.resource.data.get('purpose', '') in ['business', 'personal', 'other'])
           && (request.resource.data.type != 'trade' || (
             request.resource.data.keys().hasAll(['symbol', 'marketId', 'side', 'leverage'])

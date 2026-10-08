@@ -191,6 +191,21 @@ function requestActions(item) {
   return statusControls;
 }
 
+function withdrawalRequestDetails(item) {
+  if (item.type !== 'withdrawal') return '';
+  const method = item.method === 'bank_transfer'
+    ? 'Bank transfer'
+    : item.method === 'crypto_wallet' ? 'Crypto wallet' : 'Legacy destination';
+  const details = item.method === 'bank_transfer'
+    ? [['Bank name', item.bankName], ['Account holder', item.accountHolder], ['Account number / IBAN', item.destination], ['SWIFT/BIC', item.swiftBic]]
+    : item.method === 'crypto_wallet'
+      ? [['Asset and network', item.network], ['Wallet address', item.destination], ['Memo / tag', item.memoTag]]
+      : [['Destination', item.destination]];
+  const rows = details.filter(([, value]) => value != null && String(value).trim())
+    .map(([name, value]) => `<p><b>${esc(name)}:</b> ${esc(value)}</p>`).join('');
+  return `<details class="admin-withdrawal-details"><summary>${method} payout details</summary>${rows || '<p>No destination details were saved.</p>'}</details>`;
+}
+
 async function seedStarterContent() {
   for (const collectionName of ['signals', 'marketAssets', 'copyStrategies', 'plans', 'digitalAssets', 'news', 'marketCalendar']) {
     const existing = await listRecords(collectionName);
@@ -266,10 +281,13 @@ async function render() {
   const latestRequests = requests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 20);
   const requestProfiles = await Promise.all(latestRequests.map((item) => getUserProfile(item.uid).catch(() => null)));
   qs('#requests-list').innerHTML = latestRequests.length ? latestRequests.map((item, index) => {
-    const details = [item.symbol && `${item.symbol} ${item.side || ''}`, item.method, item.destination, item.purpose].filter(Boolean).join(' · ');
+    const details = item.type === 'withdrawal'
+      ? item.method === 'crypto_wallet' ? `Crypto wallet · ${item.network || ''}` : item.method === 'bank_transfer' ? 'Bank transfer' : 'Withdrawal destination'
+      : [item.symbol && `${item.symbol} ${item.side || ''}`, item.method, item.destination, item.purpose].filter(Boolean).join(' · ');
     return `<article class="admin-request-record">
       <div class="admin-request-summary"><div><b>${label(item.type)}</b><small>${label(requestProfiles[index]?.legalName || item.uid?.slice(0, 10))}${details ? ` · ${esc(details)}` : ''}</small></div>
         <span>${item.amount == null ? '—' : esc(item.amount)} ${label(item.currency || '')}</span><span class="status-pill">${label(item.status)}</span><small>${esc(timeText(item.createdAt))}</small></div>
+      ${withdrawalRequestDetails(item)}
       ${requestActions(item)}
     </article>`;
   }).join('') : empty('No member requests have been submitted.');
