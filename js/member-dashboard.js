@@ -55,7 +55,7 @@ function renderShell() {
         <a class="brand dashboard-brand" href="${ROOT}index.html"><span class="brand-mark"><img src="${ROOT}assets/vertix-trade-mark.png" alt=""></span><span>VERTIX<span class="brand-light"> TRADE</span></span></a>
         <div class="member-card"><span class="member-avatar" data-member-initials>VT</span><span><b data-member-name>Account holder</b><small>Member account</small></span><i class="online-dot"></i></div>
         <nav class="dashboard-nav" aria-label="Member dashboard">${nav}</nav>
-        <div class="sidebar-bottom"><div class="support-glass"><small>SUPPORT</small><p>Contact Vertix Trade support.</p><a href="mailto:hello@vertixtrade.com">Email support ↗</a></div><a class="side-link logout-link" href="${ROOT}login.html" data-logout><span class="side-icon">↩</span>Logout</a></div>
+        <div class="sidebar-bottom"><div class="support-glass"><small>SUPPORT</small><p>Contact Vertix Trade support.</p><a href="mailto:support@vertrixtrades.com">Email support ↗</a></div><a class="side-link logout-link" href="${ROOT}login.html" data-logout><span class="side-icon">↩</span>Logout</a></div>
         </aside><div class="sidebar-scrim" id="sidebar-scrim" aria-hidden="true"></div>
       <main class="dashboard-main">
         <header class="dashboard-topbar"><button class="mobile-nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><div class="breadcrumb">ACCOUNT / ${esc(title.toUpperCase())}</div><div class="topbar-actions"><span class="market-open"><i class="online-dot"></i> <span data-account-status>Account</span></span><a class="topbar-icon" href="${ROOT}dashboard/profile.html" aria-label="Profile" data-member-initials>VT</a></div></header>
@@ -207,11 +207,11 @@ async function renderPage() {
     const accountBalance = profile.balance == null || (balanceCurrency !== currency && profile.balance !== 0) ? '—' : money(profile.balance, currency);
     content.innerHTML = `<div class="content-grid"><div>${requestForm('trade')}${renderTable('Order requests', ['Market', 'Side', 'Size', 'Status', 'Submitted'], rows)}</div><aside>${panel('Account balance', `<strong class="large-value">${esc(accountBalance)}</strong><p class="muted-copy">${esc(currency)}</p>`)}</aside></div>`;
   } else if (pageKey === 'tradinghistory') {
-    const rows = trades.slice().sort(byTime).map((item) => { const pnl = item.realizedPnl ?? item.unrealizedPnl; return `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${pnl == null ? '—' : esc(money(pnl, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.closedAt || item.createdAt))}</td></tr>`; });
+    const rows = trades.slice().sort(byTime).map((item) => { const pnl = item.status === 'closed' ? item.realizedPnl : null; return `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${pnl == null ? '—' : esc(money(pnl, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.closedAt || item.createdAt))}</td></tr>`; });
     content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Realized P/L', 'Status', 'Date'], rows);
   } else if (pageKey === 'accounthistory') {
     const outstandingRequests = userRequests.filter((item) => !item.resultId);
-    const rows = [...transactions, ...outstandingRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.completedAt || item.createdAt))}</td></tr>`);
+    const rows = [...transactions, ...outstandingRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type === 'profit_loss' ? 'Profit/loss' : item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.completedAt || item.createdAt))}</td></tr>`);
     content.innerHTML = renderTable('Transactions', ['Type', 'Details', 'Amount / P/L', 'Status', 'Date'], rows);
   } else if (pageKey === 'copy-trading') {
     const strategies = await listPublicRecords('copyStrategies');

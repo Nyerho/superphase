@@ -312,7 +312,7 @@ async function loadFundingForm(method) {
 function fillPlatformSettings(settings = {}) {
   const form = qs('#platform-settings-form');
   if (!form) return;
-  const defaults = { companyName: 'Vertix Trade', supportEmail: 'support@vertixtrades.com', depositMin: 10, depositMax: 100000, withdrawalMin: 10, withdrawalMax: 100000, depositFeePercent: 0, withdrawalFeePercent: 1 };
+  const defaults = { companyName: 'Vertix Trade', supportEmail: 'support@vertrixtrades.com', depositMin: 10, depositMax: 100000, withdrawalMin: 10, withdrawalMax: 100000, depositFeePercent: 0, withdrawalFeePercent: 1 };
   for (const [name, fallback] of Object.entries(defaults)) form.elements.namedItem(name).value = settings[name] ?? fallback;
 }
 
