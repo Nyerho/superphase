@@ -169,8 +169,12 @@ function addTicker(markets) {
 
 function renderActivityTabs(container, requests, trades, transactions, currency) {
   const recentTrades = trades.slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8);
-  const tradeRows = recentTrades.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td class="${Number(item.realizedPnl ?? item.unrealizedPnl) >= 0 ? 'text-success' : 'text-danger'}">${item.realizedPnl != null ? esc(money(item.realizedPnl, item.currency || currency)) : item.unrealizedPnl != null ? esc(money(item.unrealizedPnl, item.currency || currency)) : '—'}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.closedAt || item.openedAt || item.createdAt))}</td></tr>`);
-  const transactionRows = transactions.slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8).map((item) => `<tr><td><b>${esc(item.type || 'Transaction')}</b></td><td>${esc(item.method || item.destination || item.reference || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.completedAt || item.createdAt))}</td></tr>`);
+  const tradeRows = recentTrades.map((item) => {
+    const pnl = item.status === 'closed' ? item.realizedPnl : null;
+    const pnlClass = pnl == null ? '' : Number(pnl) >= 0 ? 'text-success' : 'text-danger';
+    return `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td class="${pnlClass}">${pnl == null ? '—' : esc(money(pnl, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.closedAt || item.openedAt || item.createdAt))}</td></tr>`;
+  });
+  const transactionRows = transactions.slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8).map((item) => `<tr><td><b>${esc(item.type === 'profit_loss' ? 'Profit/loss' : item.type || 'Transaction')}</b></td><td>${esc(item.method || item.destination || item.reference || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(timeText(item.completedAt || item.createdAt))}</td></tr>`);
   const requestRows = requests.filter((item) => !item.resultId).slice().sort((a, b) => timeValue(b.createdAt) - timeValue(a.createdAt)).slice(0, 8).map((item) => `<tr><td><b>${esc(item.type || 'Request')}</b></td><td>${esc(item.symbol || item.method || item.destination || item.purpose || item.subject || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(timeText(item.createdAt))}</td></tr>`);
   container.innerHTML = `
     <section class="dashboard-activity-panel" aria-label="Account activity">
@@ -180,7 +184,7 @@ function renderActivityTabs(container, requests, trades, transactions, currency)
         <button type="button" role="tab" id="tab-requests" aria-controls="panel-requests" aria-selected="false" data-activity-tab="requests">Account requests</button>
       </div>
         <div id="panel-open-trades" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-open-trades">
-          <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Simulated P/L</th><th>Status</th><th>Date</th></tr></thead><tbody>${tradeRows.length ? tradeRows.join('') : '<tr><td colspan="6">No trades have been recorded.</td></tr>'}</tbody></table></div>
+          <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Realized P/L</th><th>Status</th><th>Date</th></tr></thead><tbody>${tradeRows.length ? tradeRows.join('') : '<tr><td colspan="6">No trades have been recorded.</td></tr>'}</tbody></table></div>
       </div>
       <div id="panel-transactions" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-transactions" hidden>
         <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Type</th><th>Details</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${transactionRows.length ? transactionRows.join('') : '<tr><td colspan="5">No completed transactions have been recorded.</td></tr>'}</tbody></table></div>

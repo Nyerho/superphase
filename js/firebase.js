@@ -47,14 +47,6 @@ let db;
 let firebasePromise;
 const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
 const SYSTEM_ADMIN_EMAIL = 'admin@vertixtrades.com';
-function simulatedPnl(amount, symbol, side) {
-  const text = `${symbol}:${side}`;
-  const hash = [...text].reduce((total, character) => (total * 31 + character.charCodeAt(0)) >>> 0, 7);
-  const rate = 0.0025 + (hash % 35) / 10000;
-  const direction = (hash % 2 === 0 ? 1 : -1) * (side === 'sell' ? -1 : 1);
-  return Number((Number(amount) * rate * direction).toFixed(2));
-}
-
 function firebaseReady() {
   if (!firebasePromise) {
     firebasePromise = (async () => {
@@ -426,7 +418,7 @@ export async function openTrade(uid, fields = {}) {
     transaction.set(tradeRef, {
       uid, requestId: tradeRef.id, marketId: String(fields.marketId), type: 'trade', symbol: String(fields.symbol),
       side: fields.side, amount, currency: String(fields.currency), leverage: Number(fields.leverage),
-      duration: String(fields.duration || ''), entryPrice: Number(fields.entryPrice || 0), status: 'open', unrealizedPnl: simulatedPnl(amount, fields.symbol, fields.side),
+      duration: String(fields.duration || ''), entryPrice: Number(fields.entryPrice || 0), status: 'open',
       openedAt: now, createdAt: now, processedBy: 'member-balance'
     });
     transaction.update(profileRef, { balance: balance - amount, balanceCurrency: String(fields.currency), balanceUpdatedAt: now, updatedAt: now });
@@ -453,7 +445,7 @@ export async function addManualTrade(uid, fields = {}) {
     transaction.set(tradeRef, {
       uid, requestId: tradeRef.id, marketId: String(fields.marketId), type: 'trade', symbol: String(fields.symbol), side: fields.side,
       amount, currency: String(fields.currency), leverage: Number(fields.leverage || 1), duration: String(fields.duration || ''),
-      entryPrice, status: 'open', unrealizedPnl: simulatedPnl(amount, fields.symbol, fields.side), openedAt: at, createdAt: at, processedBy: 'admin-manual', manual: true,
+      entryPrice, status: 'open', openedAt: at, createdAt: at, processedBy: 'admin-manual', manual: true,
       ...(fields.takeProfit ? { takeProfit: Number(fields.takeProfit) } : {}), ...(fields.stopLoss ? { stopLoss: Number(fields.stopLoss) } : {})
     });
   });
@@ -559,7 +551,7 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
       record = {
         uid, requestId, marketId: request.marketId, type: 'trade', symbol: String(request.symbol), side: request.side,
         amount, currency, leverage, duration: String(request.duration || ''),
-        entryPrice: price, status: 'open', unrealizedPnl: simulatedPnl(amount, request.symbol, request.side), openedAt: null,
+        entryPrice: price, status: 'open', openedAt: null,
         ...(request.takeProfit == null ? {} : { takeProfit: Number(request.takeProfit) }),
         ...(request.stopLoss == null ? {} : { stopLoss: Number(request.stopLoss) })
       };
