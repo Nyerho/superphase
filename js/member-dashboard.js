@@ -167,16 +167,35 @@ function requestForm(type) {
   const maximum = Number(platformSettings[isDeposit ? 'depositMax' : 'withdrawalMax']);
   const amountLimits = `min="${minimum}" step="0.01" ${Number.isFinite(maximum) && maximum > 0 ? `max="${maximum}"` : ''} required`;
   const fee = Number(platformSettings[isDeposit ? 'depositFeePercent' : 'withdrawalFeePercent']) || 0;
+  const withdrawalFields = `${fieldSelect('Withdrawal method', 'method', [['bank_transfer', 'Bank transfer'], ['crypto_wallet', 'Crypto wallet']], 'required data-withdrawal-method')}
+    <div class="withdrawal-destination-fields" data-withdrawal-fields="bank_transfer">
+      ${input('Bank name', 'bankName', 'text', 'maxlength="120" autocomplete="organization" required')}
+      ${input('Account holder name', 'accountHolder', 'text', 'maxlength="120" autocomplete="name" required')}
+      ${input('Account number or IBAN', 'destination', 'text', 'maxlength="200" autocomplete="off" required')}
+      ${input('SWIFT/BIC (optional)', 'swiftBic', 'text', 'maxlength="11" autocomplete="off"')}
+    </div>
+    <div class="withdrawal-destination-fields" data-withdrawal-fields="crypto_wallet" hidden>
+      ${input('Crypto asset and network', 'network', 'text', 'maxlength="80" placeholder="e.g. USDT on TRC20" required')}
+      ${input('Crypto wallet address', 'destination', 'text', 'maxlength="200" autocomplete="off" required')}
+      ${input('Memo / tag, if required by the network', 'memoTag', 'text', 'maxlength="100" autocomplete="off"')}
+    </div>`;
   const form = `<form method="post" class="standard-form" data-request-form="${type}">
     ${input(`Amount (${currency})`, 'amount', 'number', amountLimits)}
     ${isDeposit
       ? `${fieldSelect('Funding method', 'method', methodOptions, 'required data-funding-method')}<div class="funding-instructions" data-funding-instructions>${fundingDetails(firstMethod)}</div>`
-      : input('Saved destination reference', 'destination', 'text', 'maxlength="100" required')}
+      : withdrawalFields}
     <button class="button button-primary" type="submit">Submit ${isDeposit ? 'deposit' : 'withdrawal'} request ↗</button>
-    <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'This request does not send funds. An administrator records it only after the external withdrawal is sent.'} Standard fee: ${esc(fee)}%.</p>
+    <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'No funds are transferred automatically; an administrator reviews the request. Never enter online-banking passwords, card numbers, PINs, crypto seed phrases, or private keys.'} Standard fee: ${esc(fee)}%.</p>
     <p class="form-status" aria-live="polite"></p>
   </form>`;
   return panel(labels, form);
+}
+
+function requestMethodLabel(item) {
+  if (item.type !== 'withdrawal') return item.method || item.destination || '—';
+  if (item.method === 'bank_transfer') return 'Bank transfer';
+  if (item.method === 'crypto_wallet') return `Crypto wallet · ${item.network || 'network not provided'}`;
+  return 'Withdrawal destination';
 }
 
 async function renderPage() {
@@ -199,7 +218,7 @@ async function renderPage() {
   if (pageKey === 'deposits' || pageKey === 'withdrawals') {
     const type = pageKey === 'deposits' ? 'deposit' : 'withdrawal';
     const filtered = userRequests.filter((item) => item.type === type);
-    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(item.method || item.destination || '—')} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small></span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
+    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(requestMethodLabel(item))} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small></span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
   } else if (pageKey === 'trade') {
     const mine = userRequests.filter((item) => item.type === 'trade');
     const rows = mine.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
@@ -336,7 +355,7 @@ function bindForms() {
       const data = new FormData(form);
       const type = form.dataset.requestForm;
       const fields = { currency };
-      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'purpose', 'message']) {
+      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'bankName', 'accountHolder', 'swiftBic', 'network', 'memoTag', 'purpose', 'message']) {
         if (data.has(key)) fields[key] = ['amount', 'leverage'].includes(key) ? Number(data.get(key)) : String(data.get(key)).trim();
       }
       if (type === 'trade') {
@@ -367,6 +386,27 @@ function bindForms() {
           return;
         }
       }
+      if (type === 'withdrawal') {
+        const destination = fields.destination || '';
+        if (fields.method === 'bank_transfer') {
+          if (!fields.bankName || fields.bankName.length < 2 || !fields.accountHolder || fields.accountHolder.length < 2 || destination.length < 4) {
+            setFormStatus(form, 'Enter the bank name, account holder, and account number or IBAN.');
+            return;
+          }
+          if (fields.swiftBic && !/^[A-Z0-9]{8}(?:[A-Z0-9]{3})?$/i.test(fields.swiftBic)) {
+            setFormStatus(form, 'Enter a valid 8- or 11-character SWIFT/BIC, or leave it blank.');
+            return;
+          }
+        } else if (fields.method === 'crypto_wallet') {
+          if (!fields.network || fields.network.length < 2 || destination.length < 8) {
+            setFormStatus(form, 'Enter the crypto asset/network and destination wallet address.');
+            return;
+          }
+        } else {
+          setFormStatus(form, 'Choose a bank-transfer or crypto-wallet withdrawal method.');
+          return;
+        }
+      }
       if (type === 'trade' && (!Number.isFinite(fields.leverage) || fields.leverage < 1 || fields.leverage > 10)) {
         setFormStatus(form, 'Select leverage between 1× and 10×.');
         return;
@@ -389,6 +429,21 @@ function bindForms() {
         button.disabled = false;
       }
     });
+  });
+
+  document.querySelectorAll('[data-withdrawal-method]').forEach((select) => {
+    const form = select.closest('form');
+    const syncFields = () => {
+      form?.querySelectorAll('[data-withdrawal-fields]').forEach((section) => {
+        const active = section.dataset.withdrawalFields === select.value;
+        section.hidden = !active;
+        section.querySelectorAll('input, select, textarea').forEach((control) => {
+          control.disabled = !active;
+        });
+      });
+    };
+    select.addEventListener('change', syncFields);
+    syncFields();
   });
 
   document.querySelector('[data-funding-method]')?.addEventListener('change', (event) => {
