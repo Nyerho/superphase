@@ -34,3 +34,47 @@
 .chart-controls input, .chart-controls select { min-height: 39px; padding: 10px 11px; border: 1px solid var(--vt-line, rgba(255,255,255,.11)); border-radius: 9px; outline: none; background: rgba(5,6,6,.43); color: var(--vt-white, #f5f5f0); font: inherit; font-size: 10px; }
 .chart-controls option { background: #141617; }
 @media(max-width:760px){ .market-chart-frame { height: 560px; min-height: 460px; } .chart-controls { grid-template-columns: 1fr; } }
+
+/* Mobile overflow guardrails: keep every dashboard surface inside the viewport. */
+html, body { overflow-x: hidden; }
+.dashboard-main, .page-content, .page-content > *, .dash-panel, .stat-card, .feature-card, .indicator-card, .collectible-card, .news-card, .content-grid > div, .content-grid > aside { min-width: 0; max-width: 100%; }
+img, svg, canvas, iframe, video { max-width: 100%; }
+.stat-card strong, .large-value, .detail-list b, .panel-copy, .muted-copy, .form-disclosure, .funding-instructions, .news-card h2, .news-card p { overflow-wrap: anywhere; word-break: break-word; }
+.stat-card strong { font-size: clamp(18px, 4vw, 25px); line-height: 1.15; }
+.panel-heading, .chart-summary, .profile-block, .feature-top { min-width: 0; flex-wrap: wrap; }
+.panel-heading h2, .chart-summary > *, .profile-block > *, .feature-top > * { min-width: 0; }
+.detail-list > div { align-items: flex-start; flex-wrap: wrap; }
+.detail-list b { max-width: 100%; }
+.market-list { min-width: 0; overflow-x: auto; }
+.market-row, .market-head { min-width: 270px; }
+.table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 520px; }
+input, select, textarea, button, .button { max-width: 100%; }
+
+@media (max-width: 600px) {
+  .dashboard-topbar { gap: 8px; }
+  .breadcrumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-actions { gap: 8px; }
+  .market-open { min-width: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .page-intro h1 { max-width: 100%; overflow-wrap: anywhere; }
+  .page-intro .button, .desktop-top-action { width: 100%; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .stat-card { padding: 14px 15px; }
+  .dash-panel { padding: 15px; }
+  .panel-heading { align-items: flex-start; }
+  .panel-link { white-space: normal; text-align: right; }
+  .trade-actions { display: grid; grid-template-columns: 1fr; }
+  .trade-actions .button { width: 100%; }
+  .calendar-event { min-width: 0; }
+  .feature-metrics { flex-wrap: wrap; }
+}
+
+@media (max-width: 380px) {
+  .dashboard-main { padding-inline: 10px; }
+  .dashboard-topbar { height: 55px; }
+  .mobile-nav-toggle { margin-right: 5px; padding: 5px 7px; }
+  .topbar-icon { width: 28px; height: 28px; }
+  .dash-panel { padding: 13px; }
+  .page-intro { padding-top: 19px; }
+  .page-intro h1 { font-size: 25px; }
+}
