@@ -227,7 +227,7 @@ async function renderPage() {
     content.innerHTML = `<div class="content-grid"><div>${requestForm('trade')}${renderTable('Order requests', ['Market', 'Side', 'Size', 'Status', 'Submitted'], rows)}</div><aside>${panel('Account balance', `<strong class="large-value">${esc(accountBalance)}</strong><p class="muted-copy">${esc(currency)}</p>`)}</aside></div>`;
   } else if (pageKey === 'tradinghistory') {
     const rows = trades.slice().sort(byTime).map((item) => { const pnl = item.status === 'closed' ? item.realizedPnl : null; return `<tr><td><b>${esc(item.symbol || item.market || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${pnl == null ? '—' : esc(money(pnl, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.closedAt || item.createdAt))}</td></tr>`; });
-    content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Realized P/L', 'Status', 'Date'], rows);
+    content.innerHTML = renderTable('Trade history', ['Market', 'Side', 'Size', 'Total Profits', 'Status', 'Date'], rows);
   } else if (pageKey === 'accounthistory') {
     const outstandingRequests = userRequests.filter((item) => !item.resultId);
     const rows = [...transactions, ...outstandingRequests].sort(byTime).map((item) => `<tr><td><b>${esc(item.type === 'profit_loss' ? 'Profit/loss' : item.type || 'Transaction')}</b></td><td>${esc(item.method || item.symbol || item.destination || '—')}</td><td>${esc(money(item.pnl ?? item.amount, item.currency || currency))}</td><td>${esc(item.status || '—')}</td><td>${esc(dateText(item.completedAt || item.createdAt))}</td></tr>`);

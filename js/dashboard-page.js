@@ -184,7 +184,7 @@ function renderActivityTabs(container, requests, trades, transactions, currency)
         <button type="button" role="tab" id="tab-requests" aria-controls="panel-requests" aria-selected="false" data-activity-tab="requests">Account requests</button>
       </div>
         <div id="panel-open-trades" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-open-trades">
-          <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Realized P/L</th><th>Status</th><th>Date</th></tr></thead><tbody>${tradeRows.length ? tradeRows.join('') : '<tr><td colspan="6">No trades have been recorded.</td></tr>'}</tbody></table></div>
+          <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Market</th><th>Side</th><th>Size</th><th>Total Profits</th><th>Status</th><th>Date</th></tr></thead><tbody>${tradeRows.length ? tradeRows.join('') : '<tr><td colspan="6">No trades have been recorded.</td></tr>'}</tbody></table></div>
       </div>
       <div id="panel-transactions" class="dashboard-activity-table" role="tabpanel" aria-labelledby="tab-transactions" hidden>
         <div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Type</th><th>Details</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${transactionRows.length ? transactionRows.join('') : '<tr><td colspan="5">No completed transactions have been recorded.</td></tr>'}</tbody></table></div>
