@@ -42,6 +42,7 @@ let fundingMethods = [];
 let platformSettings = {};
 let tradingViewPromise;
 let chartCounter = 0;
+let requestSubmitBound = false;
 let realtimeTimer;
 const realtimeUnsubscribers = [];
 
@@ -349,8 +350,11 @@ function mountTradingViewChart(symbol, targetId) {
 }
 
 function bindForms() {
-  document.querySelectorAll('[data-request-form]').forEach((form) => {
-    form.addEventListener('submit', async (event) => {
+  if (!requestSubmitBound && appRoot) {
+    requestSubmitBound = true;
+    appRoot.addEventListener('submit', async (event) => {
+      const form = event.target instanceof Element ? event.target.closest('[data-request-form]') : null;
+      if (!form || !appRoot.contains(form)) return;
       event.preventDefault();
       const data = new FormData(form);
       const type = form.dataset.requestForm;
@@ -429,7 +433,7 @@ function bindForms() {
         button.disabled = false;
       }
     });
-  });
+  }
 
   document.querySelectorAll('[data-withdrawal-method]').forEach((select) => {
     const form = select.closest('form');
