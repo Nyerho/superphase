@@ -224,7 +224,12 @@ async function renderPage() {
   if (pageKey === 'deposits' || pageKey === 'withdrawals') {
     const type = pageKey === 'deposits' ? 'deposit' : 'withdrawal';
     const filtered = userRequests.filter((item) => item.type === type);
-    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(requestMethodLabel(item))} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small></span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
+    const balanceCurrency = profile.balanceCurrency || currency;
+    const availableBalance = profile.balance == null || balanceCurrency !== currency ? '—' : money(profile.balance, currency);
+    const balancePanel = pageKey === 'withdrawals'
+      ? panel('Available balance', `<strong class="large-value">${esc(availableBalance)}</strong><p class="muted-copy">Updated when an administrator completes a withdrawal. Completed requests are debited from this balance.</p>`)
+      : '';
+    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(requestMethodLabel(item))} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small></span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${balancePanel}${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
   } else if (pageKey === 'trade') {
     const mine = userRequests.filter((item) => item.type === 'trade');
     const rows = mine.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);

@@ -557,11 +557,11 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
       };
     } else if (request.type === 'deposit' || request.type === 'withdrawal') {
       if (request.type === 'deposit' && !['bank_transfer', 'digital_asset', 'card_payment'].includes(request.method)) throw new Error('Choose a valid deposit method before recording receipt.');
+      let payoutDestination = '';
       if (request.type === 'withdrawal') {
         const destination = typeof request.destination === 'string' ? request.destination.trim() : '';
-        if (!destination) throw new Error('Add a withdrawal destination before recording payment.');
         if (request.method === 'bank_transfer'
-          && (typeof request.bankName !== 'string' || !request.bankName.trim()
+          && (!destination || typeof request.bankName !== 'string' || !request.bankName.trim()
             || typeof request.accountHolder !== 'string' || !request.accountHolder.trim())) {
           throw new Error('This bank withdrawal is missing its bank name or account holder.');
         }
@@ -569,9 +569,18 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
           && (typeof request.network !== 'string' || !request.network.trim() || destination.length < 8)) {
           throw new Error('This crypto withdrawal is missing its asset/network.');
         }
-        if (request.method && !['bank_transfer', 'crypto_wallet'].includes(request.method)) {
+        if (request.method === 'pix') {
+          const pixKey = typeof request.pixKey === 'string' ? request.pixKey.trim() : '';
+          if (!pixKey || typeof request.accountHolder !== 'string' || !request.accountHolder.trim()
+            || !['cpf', 'cnpj', 'email', 'phone', 'random'].includes(request.pixKeyType)) {
+            throw new Error('This Pix withdrawal is missing a valid Pix key or account holder.');
+          }
+          payoutDestination = pixKey;
+        } else if (request.method && !['bank_transfer', 'crypto_wallet'].includes(request.method)) {
           throw new Error('This withdrawal has an unsupported payout method.');
         }
+        if (!payoutDestination) payoutDestination = destination;
+        if (!payoutDestination) throw new Error('Add a withdrawal destination before recording payment.');
       }
       const storedBalance = profile.balance == null ? 0 : profile.balance;
       const balanceCurrency = profile.balanceCurrency || profile.preferredCurrency;
@@ -584,7 +593,7 @@ export async function processUserRequest(uid, requestId, { executionPrice, proce
       record = {
         uid, requestId, type: request.type, amount, currency, status: 'completed',
         ...(request.method ? { method: String(request.method) } : {}),
-        ...(request.destination ? { destination: String(request.destination.trim()) } : {}),
+        ...(payoutDestination ? { destination: payoutDestination } : request.destination ? { destination: String(request.destination.trim()) } : {}),
         balanceBefore: storedBalance, balanceAfter, completedAt: null
       };
     } else {

@@ -186,7 +186,7 @@ function requestActions(item) {
     return `${statusControls}<form class="admin-process-form" data-process-form="deposit" data-uid="${uid}" data-id="${id}" method="post"><button class="button button-primary button-small" type="submit">Record deposit received</button></form>`;
   }
   if (item.type === 'withdrawal') {
-    return `${statusControls}<form class="admin-process-form" data-process-form="withdrawal" data-uid="${uid}" data-id="${id}" method="post"><button class="button button-primary button-small" type="submit">Record withdrawal sent</button></form>`;
+    return `${statusControls}<form class="admin-process-form" data-process-form="withdrawal" data-uid="${uid}" data-id="${id}" method="post"><button class="button button-primary button-small" type="submit">Approve &amp; complete withdrawal</button></form>`;
   }
   return statusControls;
 }
@@ -566,7 +566,7 @@ async function start() {
       ? 'Confirm that this order was actually executed at the entered price.'
       : type === 'deposit'
         ? 'Confirm that the deposit was actually received before recording it.'
-        : 'Confirm that the withdrawal was actually sent before recording it.';
+        : 'Approve and complete this withdrawal? This records the payout as sent, marks the request completed, and debits the withdrawal amount from the member’s account balance in one atomic transaction. Continue only after the payout has actually been sent.';
     if (!window.confirm(instructions)) { releaseOperationButton(); return; }
     const button = processForm.querySelector('button[type="submit"]');
     button.disabled = true;
