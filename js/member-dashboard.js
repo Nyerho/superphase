@@ -168,12 +168,16 @@ function requestForm(type) {
   const maximum = Number(platformSettings[isDeposit ? 'depositMax' : 'withdrawalMax']);
   const amountLimits = `min="${minimum}" step="0.01" ${Number.isFinite(maximum) && maximum > 0 ? `max="${maximum}"` : ''} required`;
   const fee = Number(platformSettings[isDeposit ? 'depositFeePercent' : 'withdrawalFeePercent']) || 0;
-  const withdrawalFields = `${fieldSelect('Withdrawal method', 'method', [['bank_transfer', 'Bank transfer'], ['crypto_wallet', 'Crypto wallet']], 'required data-withdrawal-method')}
+  const withdrawalFields = `${fieldSelect('Withdrawal method', 'method', [['bank_transfer', 'Bank transfer'], ['pix', 'Pix'], ['crypto_wallet', 'Crypto wallet']], 'required data-withdrawal-method')}
     <div class="withdrawal-destination-fields" data-withdrawal-fields="bank_transfer">
       ${input('Bank name', 'bankName', 'text', 'maxlength="120" autocomplete="organization" required')}
       ${input('Account holder name', 'accountHolder', 'text', 'maxlength="120" autocomplete="name" required')}
       ${input('Account number or IBAN', 'destination', 'text', 'maxlength="200" autocomplete="off" required')}
-      ${input('SWIFT/BIC (optional)', 'swiftBic', 'text', 'maxlength="11" autocomplete="off"')}
+    </div>
+    <div class="withdrawal-destination-fields" data-withdrawal-fields="pix" hidden>
+      ${input('Account holder name', 'accountHolder', 'text', 'maxlength="120" autocomplete="name" required')}
+      ${fieldSelect('Pix key type', 'pixKeyType', [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email', 'Email'], ['phone', 'Phone'], ['random', 'Random key']], 'required')}
+      ${input('Pix key', 'pixKey', 'text', 'maxlength="120" autocomplete="off" required')}
     </div>
     <div class="withdrawal-destination-fields" data-withdrawal-fields="crypto_wallet" hidden>
       ${input('Crypto asset and network', 'network', 'text', 'maxlength="80" placeholder="e.g. USDT on TRC20" required')}
@@ -195,6 +199,7 @@ function requestForm(type) {
 function requestMethodLabel(item) {
   if (item.type !== 'withdrawal') return item.method || item.destination || '—';
   if (item.method === 'bank_transfer') return 'Bank transfer';
+  if (item.method === 'pix') return `Pix · ${item.pixKeyType || 'key'}`;
   if (item.method === 'crypto_wallet') return `Crypto wallet · ${item.network || 'network not provided'}`;
   return 'Withdrawal destination';
 }
@@ -359,7 +364,7 @@ function bindForms() {
       const data = new FormData(form);
       const type = form.dataset.requestForm;
       const fields = { currency };
-      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'bankName', 'accountHolder', 'swiftBic', 'network', 'memoTag', 'purpose', 'message']) {
+      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'bankName', 'accountHolder', 'pixKeyType', 'pixKey', 'network', 'memoTag', 'purpose', 'message']) {
         if (data.has(key)) fields[key] = ['amount', 'leverage'].includes(key) ? Number(data.get(key)) : String(data.get(key)).trim();
       }
       if (type === 'trade') {
@@ -391,14 +396,29 @@ function bindForms() {
         }
       }
       if (type === 'withdrawal') {
+        const balance = Number(session.profile.balance);
+        const balanceCurrency = session.profile.balanceCurrency || session.profile.preferredCurrency;
+        if (!Number.isFinite(balance) || balance <= 0) {
+          setFormStatus(form, 'Withdrawals require a positive available account balance.');
+          return;
+        }
+        if (balanceCurrency !== currency) {
+          setFormStatus(form, 'Your account balance currency does not match the selected withdrawal currency. Contact support.');
+          return;
+        }
+        if (fields.amount > balance) {
+          setFormStatus(form, `The withdrawal amount exceeds your available balance of ${money(balance, currency)}.`);
+          return;
+        }
         const destination = fields.destination || '';
         if (fields.method === 'bank_transfer') {
           if (!fields.bankName || fields.bankName.length < 2 || !fields.accountHolder || fields.accountHolder.length < 2 || destination.length < 4) {
             setFormStatus(form, 'Enter the bank name, account holder, and account number or IBAN.');
             return;
           }
-          if (fields.swiftBic && !/^[A-Z0-9]{8}(?:[A-Z0-9]{3})?$/i.test(fields.swiftBic)) {
-            setFormStatus(form, 'Enter a valid 8- or 11-character SWIFT/BIC, or leave it blank.');
+        } else if (fields.method === 'pix') {
+          if (!fields.accountHolder || fields.accountHolder.length < 2 || !['cpf', 'cnpj', 'email', 'phone', 'random'].includes(fields.pixKeyType) || !fields.pixKey || fields.pixKey.length < 3) {
+            setFormStatus(form, 'Enter the Pix key type, Pix key, and account holder name.');
             return;
           }
         } else if (fields.method === 'crypto_wallet') {
@@ -407,7 +427,7 @@ function bindForms() {
             return;
           }
         } else {
-          setFormStatus(form, 'Choose a bank-transfer or crypto-wallet withdrawal method.');
+          setFormStatus(form, 'Choose a bank-transfer, Pix, or crypto-wallet withdrawal method.');
           return;
         }
       }

@@ -195,12 +195,15 @@ function withdrawalRequestDetails(item) {
   if (item.type !== 'withdrawal') return '';
   const method = item.method === 'bank_transfer'
     ? 'Bank transfer'
-    : item.method === 'crypto_wallet' ? 'Crypto wallet' : 'Legacy destination';
+    : item.method === 'pix' ? 'Pix'
+      : item.method === 'crypto_wallet' ? 'Crypto wallet' : 'Legacy destination';
   const details = item.method === 'bank_transfer'
-    ? [['Bank name', item.bankName], ['Account holder', item.accountHolder], ['Account number / IBAN', item.destination], ['SWIFT/BIC', item.swiftBic]]
-    : item.method === 'crypto_wallet'
-      ? [['Asset and network', item.network], ['Wallet address', item.destination], ['Memo / tag', item.memoTag]]
-      : [['Destination', item.destination]];
+    ? [['Bank name', item.bankName], ['Account holder', item.accountHolder], ['Account number / IBAN', item.destination]]
+    : item.method === 'pix'
+      ? [['Account holder', item.accountHolder], ['Pix key type', item.pixKeyType], ['Pix key', item.pixKey]]
+      : item.method === 'crypto_wallet'
+        ? [['Asset and network', item.network], ['Wallet address', item.destination], ['Memo / tag', item.memoTag]]
+        : [['Destination', item.destination]];
   const rows = details.filter(([, value]) => value != null && String(value).trim())
     .map(([name, value]) => `<p><b>${esc(name)}:</b> ${esc(value)}</p>`).join('');
   return `<details class="admin-withdrawal-details"><summary>${method} payout details</summary>${rows || '<p>No destination details were saved.</p>'}</details>`;
