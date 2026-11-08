@@ -18,6 +18,7 @@ import {
   addManualTransaction,
   applyTradePnl,
   updateMemberKyc,
+  generateMemberWithdrawalCode,
   recordAdminAudit
 } from './firebase.js';
 
@@ -268,6 +269,7 @@ async function render() {
       <div><b>${label(item.legalName)}</b><small>${label(item.email)}</small></div>
       <span>${label(item.countryOfResidence)}</span>
       <span>${label(item.preferredCurrency)}</span>
+      <div class="admin-withdrawal-codes"><small>Withdrawal codes</small><div class="admin-code-actions"><span><b>BCF</b> ${item.bcfCode ? `<code class="admin-code">${esc(item.bcfCode)}</code>` : `<button type="button" data-withdrawal-code="bcf" data-uid="${esc(item.uid || item.id)}">Generate BCF</button>`}</span><span><b>Antitheft</b> ${item.antitheftCode ? `<code class="admin-code">${esc(item.antitheftCode)}</code>` : `<button type="button" data-withdrawal-code="antitheft" data-uid="${esc(item.uid || item.id)}">Generate Antitheft</button>`}</span></div></div>
       <span class="status-pill">${label(item.accountStatus)}</span><span class="status-pill">KYC: ${label(item.kycStatus || 'not_started')}</span><div class="crud-actions"><button type="button" data-kyc-status="verified" data-uid="${esc(item.uid || item.id)}">Verify KYC</button><button type="button" data-kyc-status="not_started" data-uid="${esc(item.uid || item.id)}">Reset KYC</button></div>
     </div>`).join('') : empty('No member accounts are available.');
   const memberSelect = qs('#ledger-member');
@@ -389,7 +391,7 @@ async function start() {
     if (button) lockOperationButton(button);
   }, true);
   document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-action], [data-kyc-status], [data-request-status], [data-market-active-toggle], [data-catalog-delete]');
+    const button = event.target.closest('[data-action], [data-kyc-status], [data-request-status], [data-market-active-toggle], [data-catalog-delete], [data-withdrawal-code]');
     if (button) lockOperationButton(button);
   }, true);
   const admin = await requireAdmin();
@@ -623,6 +625,19 @@ async function start() {
       } catch (error) {
         kycButton.disabled = false;
         status(error.message || 'KYC status could not be updated.');
+      }
+      return;
+    }
+    const withdrawalCodeButton = event.target.closest('[data-withdrawal-code]');
+    if (withdrawalCodeButton) {
+      withdrawalCodeButton.disabled = true;
+      try {
+        const code = await generateMemberWithdrawalCode(withdrawalCodeButton.dataset.uid, withdrawalCodeButton.dataset.withdrawalCode);
+        await render();
+        status(`${withdrawalCodeButton.dataset.withdrawalCode === 'bcf' ? 'BCF' : 'Antitheft'} code generated: ${code}`, 'success');
+      } catch (error) {
+        withdrawalCodeButton.disabled = false;
+        status(error.message || 'The withdrawal verification code could not be generated.');
       }
       return;
     }

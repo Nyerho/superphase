@@ -109,50 +109,74 @@ service cloud.firestore {
         && get(profilePath).data.get('balanceCurrency', currency) == currency;
     }
 
-    function validWithdrawalDetails(data) {
-      return data.get('method', '') == 'bank_transfer'
-        ? (data.keys().hasAll(['method', 'destination', 'bankName', 'accountHolder'])
-          && data.destination is string
-          && data.destination.size() >= 4
-          && data.destination.size() <= 200
-          && data.bankName is string
-          && data.bankName.size() >= 2
-          && data.bankName.size() <= 120
-          && data.accountHolder is string
-          && data.accountHolder.size() >= 2
-          && data.accountHolder.size() <= 120
-          && !('network' in data)
-          && !('pixKey' in data)
-          && !('pixKeyType' in data)
-          && !('memoTag' in data))
-        : data.get('method', '') == 'pix'
-          && data.keys().hasAll(['method', 'pixKeyType', 'pixKey', 'accountHolder'])
-          && data.pixKeyType in ['cpf', 'cnpj', 'email', 'phone', 'random']
-          && data.pixKey is string
-          && data.pixKey.size() >= 3
-          && data.pixKey.size() <= 120
-          && data.accountHolder is string
-          && data.accountHolder.size() >= 2
-          && data.accountHolder.size() <= 120
-          && !('destination' in data)
-          && !('bankName' in data)
-          && !('network' in data)
-          && !('swiftBic' in data)
-          && !('memoTag' in data)
-        : data.get('method', '') == 'crypto_wallet'
-          && data.keys().hasAll(['method', 'destination', 'network'])
-          && data.destination is string
-          && data.destination.size() >= 8
-          && data.destination.size() <= 200
-          && data.network is string
-          && data.network.size() >= 2
-          && data.network.size() <= 80
-          && (!('memoTag' in data) || (data.memoTag is string && data.memoTag.size() <= 100))
-          && !('bankName' in data)
-          && !('accountHolder' in data)
-          && !('pixKey' in data)
-          && !('pixKeyType' in data)
-          && !('swiftBic' in data);
+    function validWithdrawalCodes(uid, data) {
+      let profilePath = /databases/$(database)/documents/users/$(uid);
+      return data.keys().hasAll(['bcfCode', 'antitheftCode'])
+        && data.bcfCode is string
+        && data.bcfCode.matches('^[0-9]{4}$')
+        && data.antitheftCode is string
+        && data.antitheftCode.matches('^[0-9]{5}$')
+        && exists(profilePath)
+        && get(profilePath).data.get('bcfCode', '') == data.bcfCode
+        && get(profilePath).data.get('antitheftCode', '') == data.antitheftCode;
+    }
+
+    function validBankWithdrawal(uid, data) {
+      return data.keys().hasAll(['method', 'destination', 'bankName', 'accountHolder'])
+        && validWithdrawalCodes(uid, data)
+        && data.destination is string
+        && data.destination.size() >= 4
+        && data.destination.size() <= 200
+        && data.bankName is string
+        && data.bankName.size() >= 2
+        && data.bankName.size() <= 120
+        && data.accountHolder is string
+        && data.accountHolder.size() >= 2
+        && data.accountHolder.size() <= 120
+        && !('network' in data)
+        && !('pixKey' in data)
+        && !('pixKeyType' in data)
+        && !('memoTag' in data);
+    }
+
+    function validPixWithdrawal(uid, data) {
+      return data.keys().hasAll(['method', 'pixKeyType', 'pixKey', 'accountHolder'])
+        && validWithdrawalCodes(uid, data)
+        && data.pixKeyType in ['cpf', 'cnpj', 'email', 'phone', 'random']
+        && data.pixKey is string
+        && data.pixKey.size() >= 3
+        && data.pixKey.size() <= 120
+        && data.accountHolder is string
+        && data.accountHolder.size() >= 2
+        && data.accountHolder.size() <= 120
+        && !('destination' in data)
+        && !('bankName' in data)
+        && !('network' in data)
+        && !('swiftBic' in data)
+        && !('memoTag' in data);
+    }
+
+    function validCryptoWithdrawal(uid, data) {
+      return data.keys().hasAll(['method', 'destination', 'network'])
+        && validWithdrawalCodes(uid, data)
+        && data.destination is string
+        && data.destination.size() >= 8
+        && data.destination.size() <= 200
+        && data.network is string
+        && data.network.size() >= 2
+        && data.network.size() <= 80
+        && (!('memoTag' in data) || (data.memoTag is string && data.memoTag.size() <= 100))
+        && !('bankName' in data)
+        && !('accountHolder' in data)
+        && !('pixKey' in data)
+        && !('pixKeyType' in data)
+        && !('swiftBic' in data);
+    }
+
+    function validWithdrawalDetails(uid, data) {
+      return (data.get('method', '') == 'bank_transfer' && validBankWithdrawal(uid, data))
+        || (data.get('method', '') == 'pix' && validPixWithdrawal(uid, data))
+        || (data.get('method', '') == 'crypto_wallet' && validCryptoWithdrawal(uid, data));
     }
 
     match /users/{uid} {
@@ -224,7 +248,7 @@ service cloud.firestore {
             'uid', 'type', 'status', 'amount', 'currency', 'marketId', 'symbol', 'side',
             'leverage', 'duration', 'takeProfit', 'stopLoss', 'method',
             'destination', 'bankName', 'accountHolder', 'network', 'memoTag', 'pixKey', 'pixKeyType',
-            'purpose', 'message', 'subject', 'planId', 'createdAt'
+          'purpose', 'message', 'subject', 'planId', 'bcfCode', 'antitheftCode', 'createdAt'
           ])
           && (!('amount' in request.resource.data) || (request.resource.data.amount is number && request.resource.data.amount >= 0))
           && (request.resource.data.type in ['support', 'plan'] || (request.resource.data.amount is number && request.resource.data.amount > 0))
@@ -235,7 +259,7 @@ service cloud.firestore {
           && (request.resource.data.type != 'deposit' || depositAmountAllowed(request.resource.data.amount))
           && (request.resource.data.type != 'withdrawal' || withdrawalAmountAllowed(request.resource.data.amount))
           && (request.resource.data.type != 'withdrawal' || withdrawalBalanceAllowed(uid, request.resource.data.amount, request.resource.data.currency))
-          && (request.resource.data.type != 'withdrawal' || validWithdrawalDetails(request.resource.data))
+          && (request.resource.data.type != 'withdrawal' || validWithdrawalDetails(uid, request.resource.data))
           && (request.resource.data.type != 'loan' || request.resource.data.get('purpose', '') in ['business', 'personal', 'other'])
           && (request.resource.data.type != 'trade' || (
             request.resource.data.keys().hasAll(['symbol', 'marketId', 'side', 'leverage'])

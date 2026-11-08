@@ -44,6 +44,14 @@
 .admin-status{margin:-20px 0 18px}
 .admin-record-row,.admin-user-row,.admin-request-row{grid-template-columns:minmax(100px,1.4fr) minmax(55px,.8fr) minmax(55px,.8fr) minmax(45px,.6fr) auto}
 .admin-user-row{grid-template-columns:minmax(130px,1.4fr) minmax(80px,.8fr) minmax(55px,.5fr) minmax(90px,.8fr)}
+.admin-withdrawal-codes{min-width:0;padding:8px 10px;border:1px solid rgba(245,196,0,.28);border-radius:8px;background:rgba(245,196,0,.06)}
+.admin-withdrawal-codes>small{margin-bottom:5px;color:var(--accent);font-weight:700;text-transform:uppercase}
+.admin-code-actions{display:grid;gap:5px}
+.admin-code-actions span{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--muted);font-size:10px}
+.admin-code-actions b{color:var(--white);font:700 9px 'DM Mono',monospace}
+.admin-code-actions button{border:1px solid var(--accent);background:rgba(245,196,0,.12);color:var(--white);border-radius:6px;padding:4px 7px;font-size:9px;cursor:pointer}
+.admin-code-actions button:hover{background:var(--accent);color:#090a0c}
+.admin-code{color:var(--accent);font:700 11px 'DM Mono',monospace;letter-spacing:.08em}
 .admin-request-row{grid-template-columns:minmax(90px,1fr) minmax(70px,.7fr) minmax(70px,.7fr) minmax(130px,1fr)}
 .admin-record-row .crud-actions button{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:var(--muted)}
 .admin-main .form-status[data-tone="success"]{color:var(--accent)}

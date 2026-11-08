@@ -184,11 +184,13 @@ function requestForm(type) {
       ${input('Crypto wallet address', 'destination', 'text', 'maxlength="200" autocomplete="off" required')}
       ${input('Memo / tag, if required by the network', 'memoTag', 'text', 'maxlength="100" autocomplete="off"')}
     </div>`;
+  const withdrawalCodes = `${input('BCF code', 'bcfCode', 'text', 'inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" required')}
+    ${input('Antitheft code', 'antitheftCode', 'text', 'inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="off" required')}`;
   const form = `<form method="post" class="standard-form" data-request-form="${type}">
     ${input(`Amount (${currency})`, 'amount', 'number', amountLimits)}
     ${isDeposit
       ? `${fieldSelect('Funding method', 'method', methodOptions, 'required data-funding-method')}<div class="funding-instructions" data-funding-instructions>${fundingDetails(firstMethod)}</div>`
-      : withdrawalFields}
+      : `${withdrawalFields}${withdrawalCodes}`}
     <button class="button button-primary" type="submit">Submit ${isDeposit ? 'deposit' : 'withdrawal'} request ↗</button>
     <p class="form-disclosure">${isDeposit ? 'This request does not transfer or credit funds. An administrator records it only after the external deposit is received.' : 'No funds are transferred automatically; an administrator reviews the request. Never enter online-banking passwords, card numbers, PINs, crypto seed phrases, or private keys.'} Standard fee: ${esc(fee)}%.</p>
     <p class="form-status" aria-live="polite"></p>
@@ -369,7 +371,7 @@ function bindForms() {
       const data = new FormData(form);
       const type = form.dataset.requestForm;
       const fields = { currency };
-      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'bankName', 'accountHolder', 'pixKeyType', 'pixKey', 'network', 'memoTag', 'purpose', 'message']) {
+      for (const key of ['amount', 'leverage', 'marketId', 'symbol', 'side', 'duration', 'method', 'destination', 'bankName', 'accountHolder', 'pixKeyType', 'pixKey', 'network', 'memoTag', 'bcfCode', 'antitheftCode', 'purpose', 'message']) {
         if (data.has(key)) fields[key] = ['amount', 'leverage'].includes(key) ? Number(data.get(key)) : String(data.get(key)).trim();
       }
       if (type === 'trade') {
@@ -401,6 +403,30 @@ function bindForms() {
         }
       }
       if (type === 'withdrawal') {
+        if (!/^[0-9]{4}$/.test(fields.bcfCode || '')) {
+          setFormStatus(form, 'Enter the 4-digit BCF code assigned to your account.');
+          return;
+        }
+        if (!/^[0-9]{5}$/.test(fields.antitheftCode || '')) {
+          setFormStatus(form, 'Enter the 5-digit Antitheft code assigned to your account.');
+          return;
+        }
+        if (!session.profile.bcfCode) {
+          setFormStatus(form, 'No BCF code is assigned to your account. Please contact support.');
+          return;
+        }
+        if (!session.profile.antitheftCode) {
+          setFormStatus(form, 'No Antitheft code is assigned to your account. Please contact support.');
+          return;
+        }
+        if (fields.bcfCode !== session.profile.bcfCode) {
+          setFormStatus(form, 'Invalid BCF code. Please check and try again.');
+          return;
+        }
+        if (fields.antitheftCode !== session.profile.antitheftCode) {
+          setFormStatus(form, 'Invalid Antitheft code. Please check and try again.');
+          return;
+        }
         const balance = Number(session.profile.balance);
         const balanceCurrency = session.profile.balanceCurrency || session.profile.preferredCurrency;
         if (!Number.isFinite(balance) || balance <= 0) {

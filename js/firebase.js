@@ -205,6 +205,21 @@ export async function updateMemberKyc(uid, status) {
   });
 }
 
+export async function generateMemberWithdrawalCode(uid, codeType) {
+  const { db: firestore } = await firebaseReady();
+  const fields = {
+    bcf: ['bcfCode', 4],
+    antitheft: ['antitheftCode', 5]
+  };
+  const [field, length] = fields[String(codeType || '').toLowerCase()] || [];
+  if (!field) throw new Error('This withdrawal verification code is not available.');
+  const random = new Uint32Array(length);
+  crypto.getRandomValues(random);
+  const code = Array.from(random, (value) => String(value % 10)).join('');
+  await updateDoc(doc(firestore, 'users', uid), { [field]: code, updatedAt: serverTimestamp() });
+  return code;
+}
+
 export async function requireMember() {
   const user = await getAuthUser();
   if (!user) {
