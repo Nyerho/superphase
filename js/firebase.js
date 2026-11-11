@@ -1,5 +1,6 @@
 import { starterRecords } from './catalog.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import { firebaseConfig } from './firebase-config.js';
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -50,16 +51,11 @@ const SYSTEM_ADMIN_EMAIL = 'admin@vertixtrades.com';
 function firebaseReady() {
   if (!firebasePromise) {
     firebasePromise = (async () => {
-      const response = await fetch('/api/firebase-config', { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Vertix Trade could not connect to its account services. Please try again later.');
-      }
-      const config = await response.json();
       const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
-      if (required.some((key) => typeof config[key] !== 'string' || !config[key])) {
+      if (required.some((key) => typeof firebaseConfig[key] !== 'string' || !firebaseConfig[key])) {
         throw new Error('Vertix Trade account services are temporarily unavailable.');
       }
-      app = initializeApp(config);
+      app = initializeApp(firebaseConfig);
       auth = getAuth(app);
       db = getFirestore(app);
       return { app, auth, db };
