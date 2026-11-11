@@ -78,3 +78,12 @@ input, select, textarea, button, .button { max-width: 100%; }
   .page-intro { padding-top: 19px; }
   .page-intro h1 { font-size: 25px; }
 }
+
+.member-success-modal[hidden] { display: none; }
+.member-success-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(2, 4, 10, .82); backdrop-filter: blur(8px); }
+.member-success-card { width: min(420px, 100%); padding: 30px; border: 1px solid rgba(245, 196, 0, .42); border-radius: 18px; background: linear-gradient(135deg, rgba(35, 35, 30, .98), rgba(15, 16, 16, .98)); box-shadow: 0 24px 80px rgba(0, 0, 0, .5); text-align: center; }
+.member-success-icon { width: 46px; height: 46px; display: grid; place-items: center; margin: 0 auto 14px; border-radius: 50%; background: rgba(245, 196, 0, .16); color: #f5c400; font-size: 24px; font-weight: 800; }
+.member-success-card h2 { margin: 0 0 9px; font-size: 19px; }
+.member-success-card p { margin: 0 0 20px; color: var(--vt-muted, #a8a8af); line-height: 1.6; overflow-wrap: anywhere; }
+.member-success-card .button { min-width: 100px; }
+.dash-panel[hidden] { display: none; }

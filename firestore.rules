@@ -273,11 +273,13 @@ service cloud.firestore {
           ));
         allow update: if isAdmin()
           && request.resource.data.uid == uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'resultId', 'processedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusReason', 'updatedAt', 'resultId', 'processedAt'])
           && (
-            (request.resource.data.status in ['processing', 'reviewed', 'rejected']
+            (request.resource.data.status in ['processing', 'on_hold', 'reviewed', 'rejected']
               && !('resultId' in resource.data)
-              && !('resultId' in request.resource.data))
+              && !('resultId' in request.resource.data)
+              && (request.resource.data.status != 'rejected'
+                || (request.resource.data.get('statusReason', '') is string && request.resource.data.get('statusReason', '').size() >= 3)))
             || (request.resource.data.status == 'accepted'
               && requestMatchesAfter(uid, requestId, 'trade', 'accepted', 'trades'))
             || (request.resource.data.status == 'completed'

@@ -178,8 +178,8 @@ function requestActions(item) {
   const uid = esc(item.uid || '');
   const id = esc(item.id);
   const closed = Boolean(item.resultId) || ['rejected', 'completed'].includes(item.status);
-  const statusControls = closed ? '' : `<div class="crud-actions"><button type="button" data-request-status="processing" data-uid="${uid}" data-id="${id}">In review</button><button type="button" data-request-status="rejected" data-uid="${uid}" data-id="${id}">Reject</button><button type="button" data-request-status="reviewed" data-uid="${uid}" data-id="${id}">Mark reviewed</button></div>`;
-  if (closed) return statusControls || `<small>${item.resultId ? 'Activity record created' : 'Closed'}</small>`;
+  const statusControls = closed ? '' : `<div class="crud-actions"><button type="button" data-request-status="processing" data-uid="${uid}" data-id="${id}">In review</button><button type="button" data-request-status="on_hold" data-uid="${uid}" data-id="${id}">Place on hold</button><button type="button" data-request-status="reviewed" data-uid="${uid}" data-id="${id}">Mark reviewed</button></div><form class="admin-request-status-form" data-request-status-form="rejected" data-uid="${uid}" data-id="${id}" method="post"><label>Reason for rejection<textarea name="reason" rows="2" maxlength="500" required placeholder="Required when rejecting"></textarea></label><button class="button button-outline button-small" type="submit">Reject request</button></form>`;
+  if (closed) return `${item.status === 'rejected' && item.statusReason ? `<p class="admin-request-reason"><b>Rejection reason:</b> ${esc(item.statusReason)}</p>` : ''}${statusControls || `<small>${item.resultId ? 'Activity record created' : 'Closed'}</small>`}`;
   if (item.type === 'trade') {
     return `${statusControls}<form class="admin-process-form" data-process-form="trade" data-uid="${uid}" data-id="${id}" method="post"><label>Actual execution price<input name="executionPrice" type="number" min="0.00000001" step="any" required></label><button class="button button-primary button-small" type="submit">Record trade opened</button></form>`;
   }
@@ -557,6 +557,22 @@ async function start() {
         status('Market listing updated.', 'success');
       } catch (error) {
         status(error.message || 'The market listing could not be updated.');
+      }
+      return;
+    }
+    const requestStatusForm = event.target.closest('[data-request-status-form]');
+    if (requestStatusForm) {
+      event.preventDefault();
+      const button = requestStatusForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const reason = String(new FormData(requestStatusForm).get('reason') || '').trim();
+        await updateUserRequest(requestStatusForm.dataset.uid, requestStatusForm.dataset.id, requestStatusForm.dataset.requestStatusForm, reason);
+        await render();
+        status('Request rejected and the reason was saved.', 'success');
+      } catch (error) {
+        button.disabled = false;
+        status(error.message || 'The request rejection could not be saved.');
       }
       return;
     }

@@ -401,13 +401,18 @@ export async function listAllUserRequests() {
   return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
 }
 
-export async function updateUserRequest(uid, requestId, status) {
+export async function updateUserRequest(uid, requestId, status, reason = '') {
   const { db: firestore } = await firebaseReady();
-  if (!['processing', 'rejected', 'reviewed'].includes(status)) {
+  const normalizedReason = String(reason || '').trim().slice(0, 500);
+  if (!['processing', 'on_hold', 'rejected', 'reviewed'].includes(status)) {
     throw new Error('This request status is not available.');
+  }
+  if (status === 'rejected' && normalizedReason.length < 3) {
+    throw new Error('A rejection reason is required.');
   }
   await updateDoc(doc(firestore, 'users', uid, 'requests', requestId), {
     status,
+    ...(normalizedReason ? { statusReason: normalizedReason } : {}),
     updatedAt: serverTimestamp()
   });
 }

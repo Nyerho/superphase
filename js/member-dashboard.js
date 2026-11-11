@@ -64,6 +64,9 @@ function renderShell() {
         <div class="page-content" id="member-page-content">${empty('Loading account information…')}</div>
         <footer class="dashboard-footer"><span>© 2026 Vertix Trade</span><span>Account services</span></footer>
       </main>
+    </div>
+    <div class="member-success-modal" id="member-success-modal" hidden role="dialog" aria-modal="true" aria-labelledby="member-success-title">
+      <div class="member-success-card"><div class="member-success-icon">✓</div><h2 id="member-success-title">Request successfully submitted</h2><p id="member-success-message"></p><button class="button button-primary button-small" id="member-success-close" type="button">Close</button></div>
     </div>`;
 
   const toggle = document.querySelector('.mobile-nav-toggle');
@@ -77,6 +80,10 @@ function renderShell() {
     toggle.setAttribute('aria-label', opened ? 'Close navigation' : 'Open navigation');
   });
   document.getElementById('sidebar-scrim')?.addEventListener('click', () => toggle?.click());
+  const successModal = document.getElementById('member-success-modal');
+  const closeSuccessModal = () => { if (successModal) successModal.hidden = true; };
+  document.getElementById('member-success-close')?.addEventListener('click', closeSuccessModal);
+  successModal?.addEventListener('click', (event) => { if (event.target === successModal) closeSuccessModal(); });
   document.querySelectorAll('.dashboard-sidebar .side-link').forEach((link) => link.addEventListener('click', () => {
     if (window.matchMedia('(max-width: 820px)').matches && sidebarIsOpen()) toggle?.click();
   }));
@@ -87,6 +94,14 @@ function renderShell() {
     await signOutUser();
     window.location.assign(`${ROOT}login.html`);
   });
+}
+
+function showRequestSuccess(reference) {
+  const modal = document.getElementById('member-success-modal');
+  const message = document.getElementById('member-success-message');
+  if (!modal || !message) return;
+  message.textContent = `Your withdrawal request was successfully submitted. Reference: ${reference}`;
+  modal.hidden = false;
 }
 
 function sidebarIsOpen() {
@@ -231,7 +246,7 @@ async function renderPage() {
     const balancePanel = pageKey === 'withdrawals'
       ? panel('Available balance', `<strong class="large-value">${esc(availableBalance)}</strong><p class="muted-copy">Updated when an administrator completes a withdrawal. Completed requests are debited from this balance.</p>`)
       : '';
-    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(requestMethodLabel(item))} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small></span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${balancePanel}${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
+    content.innerHTML = `<div class="content-grid"><div>${requestForm(type)}${panel('Request history', filtered.length ? `<div class="activity-list">${filtered.map((item) => `<div><i class="activity-dot"></i><span><b>${esc(item.status || 'submitted')}</b><small>${esc(requestMethodLabel(item))} · ${esc(item.currency || currency)} · ${esc(item.amount ?? '—')}</small>${item.status === 'rejected' && item.statusReason ? `<small class="request-reason">Reason: ${esc(item.statusReason)}</small>` : ''}</span><time>${esc(dateText(item.createdAt))}</time></div>`).join('')}</div>` : empty('No requests have been submitted.'))}</div><aside>${balancePanel}${panel('Account currency', `<strong class="large-value">${esc(currency)}</strong><p class="muted-copy">Amounts on this page use your account currency preference.</p>`)}</aside></div>`;
   } else if (pageKey === 'trade') {
     const mine = userRequests.filter((item) => item.type === 'trade');
     const rows = mine.map((item) => `<tr><td><b>${esc(item.symbol || '—')}</b></td><td>${esc(item.side || '—')}</td><td>${esc(money(item.amount, item.currency || currency))}</td><td>${esc(item.status || 'submitted')}</td><td>${esc(dateText(item.createdAt))}</td></tr>`);
@@ -474,7 +489,13 @@ function bindForms() {
           setFormStatus(form, `Trade opened. Reference: ${result.recordId}. Remaining balance: ${result.balanceAfter.toLocaleString()} ${currency}.`, 'success');
         } else {
           const id = await createUserRequest(session.user.uid, type, fields);
-          setFormStatus(form, `Request submitted. Reference: ${id}`, 'success');
+          setFormStatus(form, `Request successfully submitted. Reference: ${id}`, 'success');
+          if (type === 'withdrawal') {
+            showRequestSuccess(id);
+            await renderPage();
+            document.querySelector('[data-request-form="withdrawal"]')?.closest('.dash-panel')?.setAttribute('hidden', '');
+            return;
+          }
         }
         form.reset();
         await renderPage();

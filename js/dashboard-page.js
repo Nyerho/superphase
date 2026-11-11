@@ -268,7 +268,9 @@ async function start() {
   const closedTrades = trades.filter((item) => item.status === 'closed');
   const openTrades = trades.filter((item) => item.status === 'open');
   const deposits = transactions.filter((item) => item.type === 'deposit' && ['settled', 'completed'].includes(item.status) && item.currency === currency);
-  const profit = closedTrades.reduce((sum, item) => sum + (item.currency === currency ? Number(item.realizedPnl) || 0 : 0), 0);
+  const profit = transactions
+    .filter((item) => item.type === 'profit_loss' && item.currency === currency)
+    .reduce((sum, item) => sum + (Number(item.pnl) || 0), 0);
   const depositTotal = deposits.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const wins = closedTrades.filter((item) => Number(item.realizedPnl) > 0).length;
   const winRatio = closedTrades.length ? `${Math.round((wins / closedTrades.length) * 100)}%` : '—';
@@ -276,7 +278,7 @@ async function start() {
   const totalBalance = profile.balance == null || (balanceCurrency !== currency && profile.balance !== 0) ? '—' : money(profile.balance, currency);
   const values = {
     balance: totalBalance,
-    profit: closedTrades.length ? money(profit, currency) : '—',
+    profit: transactions.some((item) => item.type === 'profit_loss' && item.currency === currency) ? money(profit, currency) : '—',
     bonus: profile.bonusBalance == null ? '—' : money(profile.bonusBalance, currency),
     deposits: money(depositTotal, currency),
     openTrades: String(openTrades.length),
