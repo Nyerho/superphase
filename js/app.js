@@ -1,4 +1,4 @@
-import { registerUser, loginUser, resendVerificationEmail } from './firebase.js';
+import { registerUser, loginUser, resendVerificationEmail, isAdminUser } from './firebase.js';
 
 const qs = (selector) => document.querySelector(selector);
 const formMessage = (form, message, tone = 'error') => { const target = form.querySelector('.form-status'); if (target) { target.textContent = message; target.style.color = tone === 'success' ? '#8be4b2' : '#ff8b91'; } };
@@ -7,4 +7,20 @@ document.querySelectorAll('.mobile-menu').forEach((button) => button.addEventLis
 qs('#contact-form')?.addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget; form.reset(); formMessage(form, 'Thanks — your message is in the queue.', 'success'); });
 qs('#newsletter-form')?.addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget; form.reset(); formMessage(form, 'You are on the list. Watch your inbox.', 'success'); });
 qs('#register-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; formMessage(form, 'Creating your account…', 'success'); try { const result = await registerUser(form.email.value, form.password.value, { name: form.name.value }); if (result.preview) { formMessage(form, 'Preview account ready. Add Firebase credentials to send real verification emails.', 'success'); button.disabled = false; return; } formMessage(form, 'Account created. Check your inbox for the Firebase verification email before signing in.', 'success'); form.reset(); button.disabled = false; } catch (error) { const message = error.accountCreated ? `${error.message} Your account exists, but verification is still pending.` : (error.message || 'Unable to create the account.'); formMessage(form, message); if (error.accountCreated && !form.querySelector('.resend-verification')) { const resend = document.createElement('button'); resend.type = 'button'; resend.className = 'button button-quiet resend-verification'; resend.textContent = 'Resend verification email'; resend.addEventListener('click', async () => { resend.disabled = true; try { await resendVerificationEmail(); formMessage(form, 'Verification email sent. Check your inbox and spam folder.', 'success'); } catch (resendError) { formMessage(form, resendError.message || 'Unable to resend the verification email.'); } finally { resend.disabled = false; } }); form.append(resend); } button.disabled = false; } });
-qs('#login-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button'); button.disabled = true; formMessage(form, 'Checking your details…', 'success'); try { await loginUser(form.email.value, form.password.value); window.location.href = 'admin.html'; } catch (error) { formMessage(form, error.message || 'Unable to sign in.'); button.disabled = false; } });
+qs('#login-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector('button');
+  button.disabled = true;
+  formMessage(form, 'Checking your details…', 'success');
+  try {
+    const credential = await loginUser(form.email.value, form.password.value);
+    const destination = !credential.preview && await isAdminUser(credential.user)
+      ? 'admin.html'
+      : 'user-dashboard.html';
+    window.location.replace(destination);
+  } catch (error) {
+    formMessage(form, error.message || 'Unable to sign in.');
+    button.disabled = false;
+  }
+});

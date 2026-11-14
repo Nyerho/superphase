@@ -396,6 +396,7 @@ async function start() {
   }, true);
   const admin = await requireAdmin();
   if (!admin) return;
+  qs('.admin-shell').style.visibility = 'visible';
   qs('#admin-email').textContent = admin.email || 'Administrator';
   await loadFundingForm('bank_transfer');
   fillPlatformSettings(await getPlatformSettings());

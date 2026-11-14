@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFirestore, collection, addDoc, getDocs, getDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 // Replace these values with the Firebase project supplied by the owner.
 export const firebaseConfig = {
@@ -59,6 +59,41 @@ export async function resendVerificationEmail() {
 export async function loginUser(email, password) {
   if (!auth) return { user: { email, displayName: 'Preview member' }, preview: true };
   return signInWithEmailAndPassword(auth, email, password);
+}
+export async function isAdminUser(user) {
+  if (!user || !db) return false;
+  try {
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.admin !== true) return false;
+    const adminSnapshot = await getDoc(doc(db, 'admins', user.uid));
+    if (!adminSnapshot.exists()) return false;
+    const admin = adminSnapshot.data();
+    return admin.active === true && admin.role === 'admin' && admin.email === user.email;
+  } catch (error) {
+    console.warn('Admin authorization check failed.', error);
+    return false;
+  }
+}
+export async function requireAdmin() {
+  if (!auth || !db) {
+    window.location.replace('/login.html');
+    return null;
+  }
+  const user = await new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      unsubscribe();
+      resolve(currentUser);
+    }, () => resolve(null));
+  });
+  if (!user) {
+    window.location.replace('/login.html');
+    return null;
+  }
+  if (!await isAdminUser(user)) {
+    window.location.replace('/user-dashboard.html');
+    return null;
+  }
+  return user;
 }
 export async function logoutUser() { if (auth) await signOut(auth); }
 export async function listRecords(collectionName) {
