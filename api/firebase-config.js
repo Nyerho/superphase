@@ -14,7 +14,7 @@ module.exports = function firebaseConfigHandler(req, res) {
   }
 
   if (REQUIRED_KEYS.some((key) => !process.env[key])) {
-    return res.status(503).json({ error: 'Firebase configuration is unavailable.' });
+    return res.status(503).json({ error: 'Account services are temporarily unavailable.' });
   }
 
   const config = {

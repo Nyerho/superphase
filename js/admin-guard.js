@@ -8,7 +8,7 @@ const go = (path) => window.location.replace(path);
 async function authorizeAdmin() {
   try {
     const response = await fetch('/api/firebase-config', { cache: 'no-store' });
-    if (!response.ok) throw new Error('Firebase configuration unavailable.');
+    if (!response.ok) throw new Error('Account services are temporarily unavailable.');
     const config = await response.json();
     const app = initializeApp(config, 'admin-route-guard');
     const auth = getAuth(app);

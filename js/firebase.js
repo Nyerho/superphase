@@ -52,12 +52,12 @@ function firebaseReady() {
     firebasePromise = (async () => {
       const response = await fetch('/api/firebase-config', { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error('Vertix Trade could not connect to its account services. Please try again later.');
+        throw new Error('Vertix Trade could not connect to account services. Please try again later.');
       }
       const config = await response.json();
       const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
       if (required.some((key) => typeof config[key] !== 'string' || !config[key])) {
-        throw new Error('Vertix Trade account services are temporarily unavailable.');
+        throw new Error('Account services are temporarily unavailable.');
       }
       app = initializeApp(config);
       auth = getAuth(app);
@@ -122,7 +122,7 @@ export async function registerUser(email, password, profile) {
   } catch (error) {
     verificationSent = false;
     verificationErrorCode = error?.code || 'unknown';
-    console.error('Firebase verification-email send failed:', verificationErrorCode);
+    console.error('Verification email send failed:', verificationErrorCode);
   }
   return { user, verificationSent, verificationErrorCode };
 }
