@@ -14,6 +14,8 @@ const ERROR_MESSAGES = {
   'auth/invalid-credential': 'The email address or password is incorrect.',
   'auth/user-disabled': 'This account is disabled. Contact support for help.',
   'auth/network-request-failed': 'A network error occurred. Check your connection and try again.',
+  'config-unavailable': 'Account services are not configured on this deployment. Contact the site administrator.',
+  'config-request-failed': 'Account services could not be reached on this deployment. Try again shortly.',
   'permission-denied': 'Your account could not be saved. Contact support for help.',
   'failed-precondition': 'Account services are not ready. Please try again shortly.',
   'resource-exhausted': 'Account services are busy. Please try again shortly.',

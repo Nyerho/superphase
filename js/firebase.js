@@ -50,7 +50,9 @@ function firebaseReady() {
     firebasePromise = (async () => {
       const response = await fetch('/api/firebase-config', { cache: 'no-store' });
       if (!response.ok) {
-        throw new Error('Vertix Trade could not connect to account services. Please try again later.');
+        const error = new Error('Account services are unavailable.');
+        error.code = response.status === 503 ? 'config-unavailable' : 'config-request-failed';
+        throw error;
       }
       const config = await response.json();
       const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
