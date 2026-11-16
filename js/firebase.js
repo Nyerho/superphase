@@ -45,8 +45,6 @@ let auth;
 let db;
 
 let firebasePromise;
-const SYSTEM_ADMIN_UID = 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2';
-const SYSTEM_ADMIN_EMAIL = 'admin@vertixtrades.com';
 function firebaseReady() {
   if (!firebasePromise) {
     firebasePromise = (async () => {
@@ -193,13 +191,8 @@ export async function hasAdminClaim(user, forceRefresh = false) {
   return token.claims.admin === true;
 }
 
-export function isSystemAdminAccount(user) {
-  return user?.uid === SYSTEM_ADMIN_UID && user?.email?.toLowerCase() === SYSTEM_ADMIN_EMAIL;
-}
-
 export async function isAdminUser(user) {
   if (!user) return false;
-  if (isSystemAdminAccount(user)) return true;
   if (!user.emailVerified || !(await hasAdminClaim(user, true))) return false;
   const { db: firestore } = await firebaseReady();
   const snapshot = await getDoc(doc(firestore, 'admins', user.uid));
@@ -275,7 +268,7 @@ export async function requireAdmin() {
     window.location.replace('/login.html');
     return null;
   }
-  if (!user.emailVerified && !isSystemAdminAccount(user)) {
+  if (!user.emailVerified) {
     window.location.replace('/verify-email.html');
     return null;
   }

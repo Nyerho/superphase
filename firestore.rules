@@ -9,15 +9,9 @@ service cloud.firestore {
       return signedIn() && request.auth.token.email_verified == true;
     }
 
-    function systemAdminIdentity() {
-      return signedIn()
-        && request.auth.uid == 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2'
-        && request.auth.token.get('email', '') == 'admin@vertixtrades.com';
-    }
 
     function isAdmin() {
-      return systemAdminIdentity()
-        || (verified()
+      return verified()
           && request.auth.token.get('admin', false) == true
           && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
           && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
@@ -180,8 +174,8 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow get: if owns(uid) || isAdmin() || systemAdminIdentity();
-      allow list: if isAdmin() || systemAdminIdentity();
+      allow get: if owns(uid) || isAdmin();
+      allow list: if isAdmin();
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.uid == uid
         && request.resource.data.email == request.auth.token.email
@@ -239,7 +233,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /requests/{requestId} {
-        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
+        allow read: if owns(uid) || isAdmin();
         allow create: if owns(uid)
           && request.resource.data.uid == uid
           && request.resource.data.status == 'submitted'
@@ -290,7 +284,7 @@ service cloud.firestore {
       }
 
       match /transactions/{transactionId} {
-        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
+        allow read: if owns(uid) || isAdmin();
         allow create: if isAdmin()
           && transactionId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'type', 'amount', 'currency', 'status', 'balanceBefore', 'balanceAfter', 'completedAt', 'createdAt', 'processedBy'])
@@ -332,7 +326,7 @@ service cloud.firestore {
       }
 
       match /trades/{tradeId} {
-        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
+        allow read: if owns(uid) || isAdmin();
       allow create: if isAdmin()
           && tradeId == request.resource.data.requestId
           && request.resource.data.keys().hasAll(['uid', 'requestId', 'marketId', 'type', 'symbol', 'side', 'amount', 'currency', 'leverage', 'entryPrice', 'status', 'openedAt', 'createdAt', 'processedBy'])
@@ -402,33 +396,28 @@ service cloud.firestore {
       }
 
       match /settings/{settingId} {
-        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
+        allow read: if owns(uid) || isAdmin();
         allow create, update: if owns(uid)
           && request.resource.data.keys().hasOnly(['reduceMotion', 'updatedAt']);
         allow delete: if false;
       }
 
       match /{subcollection}/{documentId} {
-        allow read: if owns(uid) || isAdmin() || systemAdminIdentity();
+        allow read: if owns(uid) || isAdmin();
         allow write: if isAdmin() && !(subcollection in ['requests', 'trades', 'transactions', 'settings']);
       }
     }
 
     match /admins/{uid} {
-      allow get: if isAdmin() || (systemAdminIdentity() && uid == 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2');
+      allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if systemAdminIdentity()
-        && uid == 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2'
-        && request.resource.data.uid == uid
-        && request.resource.data.email == 'admin@vertixtrades.com'
-        && request.resource.data.role == 'admin'
-        && request.resource.data.active == true;
+      allow create: if false;
       allow delete: if false;
     }
 
     // Required for Admin collectionGroup('requests') queries across all users.
     match /{path=**}/requests/{requestId} {
-      allow read: if isAdmin() || systemAdminIdentity();
+      allow read: if isAdmin();
     }
 
     match /signals/{id} {
@@ -461,11 +450,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     match /fundingMethods/{id} {
-      allow read: if verified() || isAdmin() || systemAdminIdentity();
+      allow read: if verified() || isAdmin();
       allow create, update, delete: if isAdmin();
     }
     match /platformSettings/{id} {
-      allow read: if verified() || isAdmin() || systemAdminIdentity();
+      allow read: if verified() || isAdmin();
       allow create, update, delete: if isAdmin();
     }
     match /auditLog/{id} {

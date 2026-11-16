@@ -24,21 +24,20 @@ async function authorizeAdmin() {
       return;
     }
 
-    const isSystemAdmin = user.uid === 'z3KAMbKcGFNYVWH2OKHtz4AT1rs2'
-      && user.email === 'admin@vertixtrades.com';
+    if (!user.emailVerified) {
+      go('/verify-email.html');
+      return;
+    }
+
+    const token = await user.getIdTokenResult(true);
     let isActiveAdmin = false;
-    if (isSystemAdmin) {
-      isActiveAdmin = true;
-    } else {
-      const token = await user.getIdTokenResult(true);
-      if (token.claims.admin === true) {
-        const snapshot = await getDoc(doc(db, 'admins', user.uid));
-        if (snapshot.exists()) {
-          const admin = snapshot.data();
-          isActiveAdmin = admin.active === true
-            && admin.role === 'admin'
-            && admin.email === user.email;
-        }
+    if (token.claims.admin === true) {
+      const snapshot = await getDoc(doc(db, 'admins', user.uid));
+      if (snapshot.exists()) {
+        const admin = snapshot.data();
+        isActiveAdmin = admin.active === true
+          && admin.role === 'admin'
+          && String(admin.email || '').toLowerCase() === String(user.email || '').toLowerCase();
       }
     }
 
