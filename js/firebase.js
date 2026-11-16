@@ -79,6 +79,16 @@ function verificationActionSettings() {
   };
 }
 
+function createReferralCode() {
+  if (globalThis.crypto?.randomUUID) {
+    return `VT-${globalThis.crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`;
+  }
+  const bytes = new Uint8Array(5);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  const fallback = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 10);
+  return `VT-${(fallback || `${Date.now()}${Math.random()}`).slice(-10).toUpperCase()}`;
+}
+
 export async function registerUser(email, password, profile) {
   const { auth: firebaseAuth, db: firestore } = await firebaseReady();
   const cleanEmail = String(email).trim().toLowerCase();
@@ -86,7 +96,7 @@ export async function registerUser(email, password, profile) {
   const user = credential.user;
   try {
     if (profile.legalName) await updateProfile(user, { displayName: profile.legalName });
-    const referralCode = `VT-${crypto.randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`;
+    const referralCode = createReferralCode();
     await setDoc(doc(firestore, 'users', user.uid), {
       uid: user.uid,
       email: cleanEmail,

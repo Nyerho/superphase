@@ -6,10 +6,17 @@ const ERROR_MESSAGES = {
   'auth/email-already-in-use': 'An account with this email address already exists.',
   'auth/invalid-email': 'Enter a valid email address.',
   'auth/weak-password': 'Choose a stronger password.',
+  'auth/operation-not-allowed': 'Account registration is temporarily unavailable. Please try again later.',
+  'auth/invalid-api-key': 'Account registration is temporarily unavailable. Please try again later.',
+  'auth/unauthorized-domain': 'This account page is not enabled for the current website. Contact support for help.',
+  'auth/internal-error': 'Account registration is temporarily unavailable. Please try again later.',
+  'auth/too-many-requests': 'Too many attempts were made. Wait a few minutes and try again.',
   'auth/invalid-credential': 'The email address or password is incorrect.',
   'auth/user-disabled': 'This account is disabled. Contact support for help.',
   'auth/network-request-failed': 'A network error occurred. Check your connection and try again.',
   'permission-denied': 'Your account could not be saved. Contact support for help.',
+  'failed-precondition': 'Account services are not ready. Please try again shortly.',
+  'resource-exhausted': 'Account services are busy. Please try again shortly.',
   unavailable: 'Account services are temporarily unavailable. Try again shortly.'
 };
 
@@ -20,7 +27,7 @@ const formMessage = (form, message, tone = 'error') => {
   target.dataset.tone = tone;
 };
 
-const errorMessage = (error) => ERROR_MESSAGES[error?.code] || error?.userMessage || 'The request could not be completed. Try again.';
+const errorMessage = (error, fallback = 'The request could not be completed. Try again.') => ERROR_MESSAGES[error?.code] || error?.userMessage || fallback;
 
 function populateCurrencies() {
   const select = qs('#preferred-currency');
@@ -97,7 +104,7 @@ qs('#register-form')?.addEventListener('submit', async (event) => {
     }
     formMessage(form, 'Your account was created. Sign in to request a verification email.', 'success');
   } catch (error) {
-    formMessage(form, errorMessage(error));
+    formMessage(form, errorMessage(error, 'We could not create your account. Check your details and try again.'));
   } finally {
     button.disabled = false;
   }
@@ -114,7 +121,7 @@ qs('#login-form')?.addEventListener('submit', async (event) => {
     const destination = !credential.preview && await isAdminUser(credential.user) ? 'admin.html' : 'user-dashboard.html';
     window.location.replace(destination);
   } catch (error) {
-    formMessage(form, errorMessage(error));
+    formMessage(form, errorMessage(error, 'We could not sign you in. Check your details and try again.'));
     button.disabled = false;
   }
 });
