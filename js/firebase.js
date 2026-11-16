@@ -1,4 +1,5 @@
 import { starterRecords } from './catalog.js';
+import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
   getAuth,
@@ -48,16 +49,18 @@ let firebasePromise;
 function firebaseReady() {
   if (!firebasePromise) {
     firebasePromise = (async () => {
-      const response = await fetch('/api/firebase-config', { cache: 'no-store' });
-      if (!response.ok) {
-        const error = new Error('Account services are unavailable.');
-        error.code = response.status === 503 ? 'config-unavailable' : 'config-request-failed';
-        throw error;
-      }
-      const config = await response.json();
-      const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
-      if (required.some((key) => typeof config[key] !== 'string' || !config[key])) {
-        throw new Error('Account services are temporarily unavailable.');
+      let config = firebaseConfig;
+      try {
+        const response = await fetch('/api/firebase-config', { cache: 'no-store' });
+        if (response.ok) {
+          const remoteConfig = await response.json();
+          const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
+          if (required.every((key) => typeof remoteConfig[key] === 'string' && remoteConfig[key])) {
+            config = remoteConfig;
+          }
+        }
+      } catch (error) {
+        console.warn('Remote Firebase config unavailable; using the static public config.', error);
       }
       app = initializeApp(config);
       auth = getAuth(app);
