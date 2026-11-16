@@ -11,6 +11,7 @@ import {
   updateProfile,
   deleteUser,
   reload,
+  getIdToken,
   getIdTokenResult
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
@@ -254,10 +255,12 @@ export async function requireMember() {
     window.location.assign('/login.html');
     return null;
   }
+  await reload(user);
   if (!user.emailVerified) {
     window.location.assign('/verify-email.html');
     return null;
   }
+  await getIdToken(user, true);
   let profile = await getUserProfile(user.uid);
   if (!profile) throw new Error('Your account profile could not be found. Contact Vertix Trade support.');
   if (user.emailVerified && profile.accountStatus === 'pending_verification') {
