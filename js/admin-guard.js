@@ -1,24 +1,14 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { getAuthUser, isAdminUser } from './firebase.js';
 
 const shell = document.querySelector('.admin-shell');
 const go = (path) => window.location.replace(path);
 
 async function authorizeAdmin() {
   try {
-    const response = await fetch('/api/firebase-config', { cache: 'no-store' });
-    if (!response.ok) throw new Error('Account services are temporarily unavailable.');
-    const config = await response.json();
-    const app = initializeApp(config, 'admin-route-guard');
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const user = await new Promise((resolve, reject) => {
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        unsubscribe();
-        resolve(currentUser);
-      }, reject);
-    });
+    // Use the same default Firebase app as login.html and admin.js. A named
+    // app has a separate Auth persistence namespace and would look signed out
+    // immediately after the login page redirects here.
+    const user = await getAuthUser();
     if (!user) {
       go('/login.html');
       return;
@@ -29,19 +19,7 @@ async function authorizeAdmin() {
       return;
     }
 
-    const token = await user.getIdTokenResult(true);
-    let isActiveAdmin = false;
-    if (token.claims.admin === true) {
-      const snapshot = await getDoc(doc(db, 'admins', user.uid));
-      if (snapshot.exists()) {
-        const admin = snapshot.data();
-        isActiveAdmin = admin.active === true
-          && admin.role === 'admin'
-          && String(admin.email || '').toLowerCase() === String(user.email || '').toLowerCase();
-      }
-    }
-
-    if (!isActiveAdmin) {
+    if (!(await isAdminUser(user))) {
       go('/user-dashboard.html');
       return;
     }
