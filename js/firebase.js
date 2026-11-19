@@ -2,7 +2,7 @@ import { starterRecords } from './catalog.js';
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
-  getAuth,
+  initializeAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   setPersistence,
@@ -66,7 +66,10 @@ function firebaseReady() {
         console.warn('Remote Firebase config unavailable; using the static public config.', error);
       }
       app = initializeApp(config);
-      auth = getAuth(app);
+      // Configure persistence at initialization time on every page. The admin
+      // guard runs after a full navigation, so relying on getAuth() defaults
+      // can leave that fresh page with an in-memory Auth state only.
+      auth = initializeAuth(app, { persistence: browserLocalPersistence });
       db = getFirestore(app);
       return { app, auth, db };
     })();

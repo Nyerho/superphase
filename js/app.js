@@ -1,4 +1,4 @@
-import { registerUser, loginUser, resendVerificationEmail, isAdminUser } from './firebase.js';
+import { registerUser, loginUser, resendVerificationEmail, isAdminUser } from './firebase.js?v=9b69ad2';
 
 const qs = (selector, root = document) => root.querySelector(selector);
 
@@ -147,7 +147,7 @@ document.addEventListener('click', async (event) => {
 qs('[data-check-verification]')?.addEventListener('click', async () => {
   const status = qs('[data-verification-status]');
   try {
-    const { refreshAuthUser } = await import('./firebase.js');
+    const { refreshAuthUser } = await import('./firebase.js?v=9b69ad2');
     const user = await refreshAuthUser();
     if (user?.emailVerified) window.location.assign('/user-dashboard.html');
     else if (status) status.textContent = 'Email verification is still pending.';

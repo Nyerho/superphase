@@ -20,7 +20,7 @@ import {
   updateMemberKyc,
   generateMemberWithdrawalCode,
   recordAdminAudit
-} from './firebase.js';
+} from './firebase.js?v=9b69ad2';
 
 const qs = (selector) => document.querySelector(selector);
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -608,7 +608,7 @@ async function start() {
   document.addEventListener('click', async (event) => {
     if (event.target.closest('[data-logout]')) {
       event.preventDefault();
-      const { signOutUser } = await import('./firebase.js');
+      const { signOutUser } = await import('./firebase.js?v=9b69ad2');
       await signOutUser();
       window.location.assign('/login.html');
       return;

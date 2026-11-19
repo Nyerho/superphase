@@ -8,7 +8,7 @@ import {
   watchUserProfile,
   createUserRequest,
   openTrade
-} from './firebase.js';
+} from './firebase.js?v=9b69ad2';
 import { renderLegacyNavigation } from './dashboard-nav.js';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -386,7 +386,7 @@ async function start() {
 
   document.querySelectorAll('[data-logout]').forEach((link) => link.addEventListener('click', async (event) => {
     event.preventDefault();
-    const { signOutUser } = await import('./firebase.js');
+    const { signOutUser } = await import('./firebase.js?v=9b69ad2');
     await signOutUser();
     window.location.assign('/login.html');
   }));
