@@ -409,7 +409,11 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      allow get: if isAdmin();
+      // The client checks this record during sign-in. Do not call isAdmin() here,
+      // because isAdmin() itself reads this same record and would recurse.
+      allow get: if verified()
+        && request.auth.uid == uid
+        && request.auth.token.get('admin', false) == true;
       allow list: if isAdmin();
       allow create: if false;
       allow delete: if false;
