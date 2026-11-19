@@ -5,6 +5,8 @@ import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  setPersistence,
+  browserLocalPersistence,
   signOut,
   onAuthStateChanged,
   sendEmailVerification,
@@ -143,6 +145,10 @@ export async function registerUser(email, password, profile) {
 
 export async function loginUser(email, password) {
   const { auth: firebaseAuth } = await firebaseReady();
+  // Make the cross-page session explicit. This prevents the admin redirect
+  // from loading a fresh Auth instance with no currentUser in browsers that
+  // do not reliably apply Firebase's default persistence during navigation.
+  await setPersistence(firebaseAuth, browserLocalPersistence);
   return signInWithEmailAndPassword(firebaseAuth, String(email).trim().toLowerCase(), password);
 }
 
