@@ -16,7 +16,7 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
           && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
           && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin'
-          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.get('email', ''));
+          && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == request.auth.token.get('email', '');
     }
 
     function owns(uid) {
