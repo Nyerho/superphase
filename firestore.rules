@@ -316,14 +316,13 @@ service cloud.firestore {
                   && request.resource.data.balanceBefore >= request.resource.data.amount
                   && request.resource.data.balanceAfter == request.resource.data.balanceBefore - request.resource.data.amount)))
             || (request.resource.data.type == 'profit_loss'
-              && requestMatchesAfter(uid, transactionId, request.resource.data.type, 'completed', 'transactions')
-              && balanceBeforeMatches(uid, request.resource.data.balanceBefore, request.resource.data.currency)
-              && getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == request.resource.data.balanceAfter
-              && getAfter(/databases/$(database)/documents/users/$(uid)).data.balanceCurrency == request.resource.data.currency
               && request.resource.data.manual == true
               && request.resource.data.processedBy == 'admin-manual'
               && request.resource.data.pnl is number
               && request.resource.data.pnl != 0
+              && accountCurrency(uid, request.resource.data.currency)
+              && request.resource.data.balanceBefore is number
+              && request.resource.data.balanceAfter is number
               && request.resource.data.balanceAfter == request.resource.data.balanceBefore + request.resource.data.pnl
               && request.resource.data.balanceAfter >= 0)
             || (request.resource.data.type in ['deposit', 'withdrawal']

@@ -14,13 +14,15 @@ import {
   getPlatformSettings,
   savePlatformSettings,
   setMemberBalance,
+  addManualProfit,
+  addMemberBonus,
   addManualTrade,
   addManualTransaction,
   applyTradePnl,
   updateMemberKyc,
   generateMemberWithdrawalCode,
   recordAdminAudit
-} from './firebase.js?v=9b69ad2';
+} from './firebase.js?v=profit-bonus-20261121';
 
 const qs = (selector) => document.querySelector(selector);
 const esc = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -277,7 +279,7 @@ async function render() {
   memberSelect.onchange = () => {
     const memberCurrency = memberSelect.selectedOptions[0]?.dataset.currency;
     if (memberCurrency) {
-      for (const input of document.querySelectorAll('#balance-form [name="currency"], #ledger-transaction-form [name="currency"], #ledger-trade-form [name="currency"]')) input.value = memberCurrency;
+      for (const input of document.querySelectorAll('#balance-form [name="currency"], #ledger-transaction-form [name="currency"], #profit-form [name="currency"], #bonus-form [name="currency"], #ledger-trade-form [name="currency"]')) input.value = memberCurrency;
     }
     if (memberSelect.value) loadPnlTrades(memberSelect.value);
   };
@@ -517,6 +519,30 @@ async function start() {
     } catch (error) { status(error.message || 'Transaction could not be added.'); }
   });
 
+  qs('#profit-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uid = ledgerMemberId();
+      const data = new FormData(event.currentTarget);
+      await addManualProfit(uid, Number(data.get('pnl')), String(data.get('currency') || '').trim().toUpperCase(), ledgerDate(data.get('at')));
+      event.currentTarget.reset();
+      status('Profit/loss added and the available balance was updated.', 'success');
+      await render();
+    } catch (error) { status(error.message || 'Profit/loss could not be added.'); }
+  });
+
+  qs('#bonus-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const uid = ledgerMemberId();
+      const data = new FormData(event.currentTarget);
+      await addMemberBonus(uid, Number(data.get('amount')), String(data.get('currency') || '').trim().toUpperCase(), ledgerDate(data.get('at')));
+      event.currentTarget.reset();
+      status('Bonus added to the member account.', 'success');
+      await render();
+    } catch (error) { status(error.message || 'Bonus could not be added.'); }
+  });
+
   qs('#ledger-trade-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
@@ -608,7 +634,7 @@ async function start() {
   document.addEventListener('click', async (event) => {
     if (event.target.closest('[data-logout]')) {
       event.preventDefault();
-      const { signOutUser } = await import('./firebase.js?v=9b69ad2');
+      const { signOutUser } = await import('./firebase.js?v=profit-bonus-20261121');
       await signOutUser();
       window.location.assign('/login.html');
       return;

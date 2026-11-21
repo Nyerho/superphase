@@ -1,4 +1,4 @@
-import { getAuthUser, isAdminUser } from './firebase.js?v=9b69ad2';
+import { getAuthUser, isAdminUser } from './firebase.js?v=profit-bonus-20261121';
 
 const shell = document.querySelector('.admin-shell');
 const go = (path) => window.location.replace(path);

@@ -523,6 +523,55 @@ export async function applyTradePnl(uid, tradeId, pnl, closePrice, at = new Date
   return transactionRef.id;
 }
 
+export async function addManualProfit(uid, pnl, currency, at = new Date()) {
+  const { db: firestore } = await firebaseReady();
+  const profitLoss = Number(pnl);
+  const accountCurrency = String(currency || '').trim().toUpperCase();
+  const effectiveAt = at instanceof Date ? Timestamp.fromDate(at) : Timestamp.now();
+  if (!Number.isFinite(profitLoss) || profitLoss === 0 || !/^[A-Z]{3}$/.test(accountCurrency)) {
+    throw new Error('Enter a non-zero profit/loss amount and a valid currency.');
+  }
+  const profileRef = doc(firestore, 'users', uid);
+  const transactionRef = doc(collection(firestore, 'users', uid, 'transactions'));
+  await runTransaction(firestore, async (transaction) => {
+    const profileSnapshot = await transaction.get(profileRef);
+    if (!profileSnapshot.exists()) throw new Error('The member profile could not be found.');
+    const profile = profileSnapshot.data();
+    const before = Number(profile.balance || 0);
+    if (!Number.isFinite(before) || before < 0) throw new Error('The member balance requires administrator review.');
+    if (profile.preferredCurrency !== accountCurrency) throw new Error('The profit currency must match the member preferred currency.');
+    const after = before + profitLoss;
+    if (after < 0) throw new Error('This loss exceeds the member balance.');
+    transaction.set(transactionRef, {
+      uid, requestId: transactionRef.id, type: 'profit_loss', amount: Math.abs(profitLoss), pnl: profitLoss,
+      currency: accountCurrency, method: 'admin-manual', status: 'completed', balanceBefore: before,
+      balanceAfter: after, completedAt: effectiveAt, createdAt: effectiveAt, processedBy: 'admin-manual', manual: true
+    });
+    transaction.update(profileRef, { balance: after, balanceCurrency: accountCurrency, balanceUpdatedAt: effectiveAt, updatedAt: serverTimestamp() });
+  });
+  return transactionRef.id;
+}
+
+export async function addMemberBonus(uid, amount, currency, at = new Date()) {
+  const { db: firestore } = await firebaseReady();
+  const bonus = Number(amount);
+  const accountCurrency = String(currency || '').trim().toUpperCase();
+  const effectiveAt = at instanceof Date ? Timestamp.fromDate(at) : Timestamp.now();
+  if (!Number.isFinite(bonus) || bonus <= 0 || !/^[A-Z]{3}$/.test(accountCurrency)) {
+    throw new Error('Enter a positive bonus amount and a valid currency.');
+  }
+  const profileRef = doc(firestore, 'users', uid);
+  await runTransaction(firestore, async (transaction) => {
+    const profileSnapshot = await transaction.get(profileRef);
+    if (!profileSnapshot.exists()) throw new Error('The member profile could not be found.');
+    const profile = profileSnapshot.data();
+    if (profile.preferredCurrency !== accountCurrency) throw new Error('The bonus currency must match the member preferred currency.');
+    const before = Number(profile.bonusBalance || 0);
+    if (!Number.isFinite(before) || before < 0) throw new Error('The member bonus balance requires administrator review.');
+    transaction.update(profileRef, { bonusBalance: before + bonus, bonusCurrency: accountCurrency, bonusUpdatedAt: effectiveAt, updatedAt: serverTimestamp() });
+  });
+}
+
 export async function addManualTransaction(uid, fields = {}) {
   const { db: firestore } = await firebaseReady();
   const amount = Number(fields.amount);

@@ -14,7 +14,7 @@ import {
   openTrade,
   updateUserProfile,
   saveUserSetting
-} from './firebase.js?v=9b69ad2';
+} from './firebase.js?v=profit-bonus-20261121';
 import { activeNavKey, pageTitles, renderModernNavigation } from './dashboard-nav.js';
 
 const ROOT = document.body.dataset.root || '../';
@@ -90,7 +90,7 @@ function renderShell() {
   document.addEventListener('click', async (event) => {
     if (!event.target.closest('[data-logout]')) return;
     event.preventDefault();
-    const { signOutUser } = await import('./firebase.js?v=9b69ad2');
+    const { signOutUser } = await import('./firebase.js?v=profit-bonus-20261121');
     await signOutUser();
     window.location.assign(`${ROOT}login.html`);
   });
