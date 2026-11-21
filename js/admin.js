@@ -521,11 +521,12 @@ async function start() {
 
   qs('#profit-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    const form = event.currentTarget;
     try {
       const uid = ledgerMemberId();
-      const data = new FormData(event.currentTarget);
+      const data = new FormData(form);
       await addManualProfit(uid, Number(data.get('pnl')), String(data.get('currency') || '').trim().toUpperCase(), ledgerDate(data.get('at')));
-      event.currentTarget.reset();
+      form.reset();
       status('Profit/loss added and the available balance was updated.', 'success');
       await render();
     } catch (error) { status(error.message || 'Profit/loss could not be added.'); }
@@ -533,11 +534,12 @@ async function start() {
 
   qs('#bonus-form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    const form = event.currentTarget;
     try {
       const uid = ledgerMemberId();
-      const data = new FormData(event.currentTarget);
+      const data = new FormData(form);
       await addMemberBonus(uid, Number(data.get('amount')), String(data.get('currency') || '').trim().toUpperCase(), ledgerDate(data.get('at')));
-      event.currentTarget.reset();
+      form.reset();
       status('Bonus added to the member account.', 'success');
       await render();
     } catch (error) { status(error.message || 'Bonus could not be added.'); }
